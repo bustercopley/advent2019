@@ -1,6 +1,6 @@
 SHELL=cmd
 PATH=c:\msys64\mingw64\bin
-FILENAMES=1.exe 2.exe
+FILENAMES=1.exe 2.exe 3.exe
 FILENAME=1.exe
 SRCDIR=.
 OBJDIR=.obj
