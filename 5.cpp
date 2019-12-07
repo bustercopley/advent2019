@@ -3,13 +3,39 @@
 
 using program_t = std::vector<int>;
 
+std::map <int, std::string> mnemonics = {
+  { 99, "HLT" },
+  { 1, "ADD" },
+  { 2, "MUL" },
+  { 3, "INP" },
+  { 4, "OUT" },
+  { 5, "JNZ" },
+  { 6, "JZ " },
+  { 7, "LT " },
+  { 8, "EQ " },
+};
+
 template <int N>
 std::array<int, N> get_params(
-  const program_t &program, int opcode, int &pc, bool verbose) {
+  const program_t &program, int opcode, int &pc, int out, bool verbose) {
+
+  if (verbose) {
+    std::cout << std::setw(4) << (pc++)
+              << "; " << std::setw(6) << opcode
+              << " " << mnemonics[opcode % 100];
+  }
+
   std::array<int, N> params;
   opcode /= 100;
   for (int i = 0; i != N; ++i) {
-    if (opcode % 10) {
+    if (i == out) {
+      int value = program[pc++];
+      params[i] = value;
+      if (verbose) {
+        std::cout << " @" << value;
+      }
+    }
+    else if (opcode % 10) {
       int value = program[pc++];
       params[i] = value;
       if (verbose) {
@@ -20,60 +46,44 @@ std::array<int, N> get_params(
       int value = program[addr];
       params[i] = value;
       if (verbose) {
-        std::cout << " [" << addr << "]=" << value;
+        std::cout << " [" << addr << "](" << value << ")";
       }
     }
     opcode /= 10;
   }
+  if (verbose) {
+    std::cout << "\n\t\t\t\t\t";
+  }
   return params;
 }
 
-int set_immediate(int opcode, int n) {
-  std::ostringstream oss;
-  oss << "00000000" << opcode;
-  std::string s = oss.str();
-  s[std::size(s) - (3 + n)] = '1';
-  std::istringstream iss(s);
-  iss >> opcode;
-  return opcode;
-}
+void put_output(int n) { }
 
-std::vector<int> input_stream;
-int input_index = 0;
-
-int get_input() {
-  if (std::size_t(input_index) == std::size(input_stream)) {
-    input_index = 0;
-  }
-  return input_stream[input_index++];
-}
-
-void put_output(int n) { std::cout << "Output(" << n << ")" << std::endl; }
-
-int run(program_t &program, int pc, bool verbose) {
+int run(program_t &program, int pc, std::vector<int> inputs, bool verbose) {
+  int input_index = 0;
   while (true) {
     if (pc < 0 || std::size_t(pc) >= std::size(program)) {
       std::cout << "\nRANGE ERROR\n";
       return -1;
     }
-    if (verbose) {
-      std::cout << pc << "; " << program[pc];
-    }
 
-    int opcode = program[pc++];
+    int opcode = program[pc];
     switch (opcode % 100) {
 
     case 99: // HALT
-      if (verbose) {
-        std::cout << " HALT " << program[0] << "\n";
+      {
+        auto p = get_params<0>(program, opcode, pc, -1, verbose);
+        (void)p;
+        if (verbose) {
+          std::cout << "halt\n--------------------------------------------\n";
+        }
+        return program[0];
       }
-      return program[0];
 
     case 1: { // PLUS
-      opcode = set_immediate(opcode, 2);
-      auto p = get_params<3>(program, opcode, pc, verbose);
+      auto p = get_params<3>(program, opcode, pc, 2, verbose);
       if (verbose) {
-        std::cout << "; [" << p[2] << "] = " << p[0] << " + " << p[1] << " = "
+        std::cout << "[" << p[2] << "] = " << p[0] << " + " << p[1] << " = "
                   << (p[0] + p[1]) << std::endl;
       }
       program[p[2]] = p[0] + p[1];
@@ -81,10 +91,9 @@ int run(program_t &program, int pc, bool verbose) {
     }
 
     case 2: { // TIMES
-      opcode = set_immediate(opcode, 2);
-      auto p = get_params<3>(program, opcode, pc, verbose);
+      auto p = get_params<3>(program, opcode, pc, 2, verbose);
       if (verbose) {
-        std::cout << "; [" << p[2] << "] = " << p[0] << " * " << p[1] << " = "
+        std::cout << "[" << p[2] << "] = " << p[0] << " * " << p[1] << " = "
                   << (p[0] * p[1]) << std::endl;
       }
       program[p[2]] = p[0] * p[1];
@@ -92,80 +101,79 @@ int run(program_t &program, int pc, bool verbose) {
     }
 
     case 3: { // INPUT
-      opcode = set_immediate(opcode, 0);
-      auto p = get_params<1>(program, opcode, pc, verbose);
-      int input = get_input();
+      auto p = get_params<1>(program, opcode, pc, 0, verbose);
+      if (std::size_t(input_index) == std::size(inputs)) {
+        std::cout << "\nINPUT ERROR\n";
+        return -1;
+      }
+      int input = inputs[input_index++];
       if (verbose) {
-        std::cout << "; [" << p[0] << "] = input() = " << input << std::endl;
+        std::cout << "[" << p[0] << "] = input() = " << input << std::endl;
       }
       program[p[0]] = input;
       break;
     }
 
     case 4: { // OUTPUT
-      auto p = get_params<1>(program, opcode, pc, verbose);
+      auto p = get_params<1>(program, opcode, pc, -1, verbose);
       int output = p[0];
       if (verbose) {
-        std::cout << "; output(" << output << ")" << std::endl;
+        std::cout << "output(" << output << ")" << std::endl;
       }
       put_output(output);
       break;
     }
 
     case 5: { // JUMP-IF-TRUE
-      auto p = get_params<2>(program, opcode, pc, verbose);
+      auto p = get_params<2>(program, opcode, pc, -1, verbose);
       int cond = p[0];
       int addr = p[1];
       if (verbose) {
-        std::cout << "; if " << cond << " != 0 jump " << addr << std::endl;
+        std::cout << "if " << cond << " jump " << addr
+                  << (cond ? " (taken)" : " (not taken)")
+                  << std::endl;
       }
-      if (cond != 0) {
+      if (cond) {
         pc = addr;
       }
       break;
     }
 
     case 6: { // JUMP-IF-FALSE
-      auto p = get_params<2>(program, opcode, pc, verbose);
+      auto p = get_params<2>(program, opcode, pc, -1, verbose);
       int cond = p[0];
       int addr = p[1];
       if (verbose) {
-        std::cout << "; if " << cond << " == 0 jump " << addr << std::endl;
+        std::cout << "if not " << cond << " jump " << addr
+                  << (!cond ? " (taken)" : " (not taken)")
+                  << std::endl;
       }
-      if (cond == 0) {
+      if (!cond) {
         pc = addr;
       }
       break;
     }
 
-    // Opcode 7 is less than: if the first parameter is less than the second
-    // parameter, it stores 1 in the position given by the third parameter.
-    // Otherwise, it stores 0.
     case 7: { // LESS THAN
-      opcode = set_immediate(opcode, 2);
-      auto p = get_params<3>(program, opcode, pc, verbose);
+      auto p = get_params<3>(program, opcode, pc, 2, verbose);
       int a = p[0];
       int b = p[1];
       int addr = p[2];
       if (verbose) {
-        std::cout << "; [" << addr << "] = (" << a << " < " << b
+        std::cout << "[" << addr << "] = (" << a << " < " << b
                   << ") = " << (a < b ? 1 : 0) << std::endl;
       }
       program[addr] = (a < b ? 1 : 0);
       break;
     }
 
-    // Opcode 8 is equals: if the first parameter is equal to the second
-    // parameter, it stores 1 in the position given by the third parameter.
-    // Otherwise, it stores 0.
     case 8: { // EQUALS
-      opcode = set_immediate(opcode, 2);
-      auto p = get_params<3>(program, opcode, pc, verbose);
+      auto p = get_params<3>(program, opcode, pc, 2, verbose);
       int a = p[0];
       int b = p[1];
       int addr = p[2];
       if (verbose) {
-        std::cout << "; [" << addr << "] = (" << a << " == " << b
+        std::cout << "[" << addr << "] = (" << a << " == " << b
                   << ") = " << (a == b ? 1 : 0) << std::endl;
       }
       program[addr] = (a == b ? 1 : 0);
@@ -181,28 +189,27 @@ int run(program_t &program, int pc, bool verbose) {
 }
 
 void part_one(const std::vector<program_t> &programs, bool verbose) {
-  input_index = 0;
-  input_stream = {1};
   auto program = programs[0];
   std::cout << "Part One\n";
-  run(program, 0, verbose);
+  run(program, 0, {1}, verbose);
 }
 
 void part_two_tests(const std::vector<program_t> &programs, bool verbose) {
-  std::cout << "Part Two tests\n";
-  input_stream = {8, 8, 8, 8};
-  input_index = 0;
-  for (auto program : programs) {
-    run(program, 0, verbose);
+  std::cout << "\nPart Two tests\n";
+  int inputs[] = { 0, 8, 9 };
+  for (int input: inputs) {
+    std::cout << "\nInput = " << input << std::endl;
+    for (auto program : programs) {
+      run(program, 0, {input}, verbose);
+    }
   }
+  std::cout << "\n";
 }
 
 void part_two(const std::vector<program_t> &programs, bool verbose) {
   std::cout << "Part Two\n";
-  input_stream = {5};
-  input_index = 0;
   program_t program = programs[0];
-  run(program, 0, verbose);
+  run(program, 0, {5}, verbose);
 }
 
 std::vector<program_t> read(const char *filename) {
@@ -229,15 +236,11 @@ std::vector<program_t> read(const char *filename) {
 }
 
 int CALLBACK _tWinMain(HINSTANCE, HINSTANCE, LPTSTR, int) {
-
-  {
-    auto test_programs = read("5-test.data");
-    auto programs = read("5.data");
-    input_stream = {1};
-    part_one(programs, false);
-    part_two_tests(test_programs, true);
-    part_two(programs, false);
-  }
-
+  auto test_programs = read("5-test.data");
+  auto programs = read("5.data");
+  bool verbose = true;
+  part_one(programs, verbose);
+  part_two_tests(test_programs, verbose);
+  part_two(programs, verbose);
   return 0;
 }

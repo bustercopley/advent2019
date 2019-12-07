@@ -14,7 +14,7 @@ pch_CPPFLAGS=-include $(OBJDIR)/$(pch_NAME)
 CC=gcc
 CXX=g++
 CPPFLAGS=-D_UNICODE
-CFLAGS=-mwindows -municode -march=native -mtune=native -mfpmath=sse -fno-ident -Wall -Werror -Werror=trampolines -pedantic-errors -O2 -ggdb
+CFLAGS=-mwindows -municode -march=native -mtune=native -mfpmath=sse -fno-ident -Wall -Werror -Werror=trampolines -pedantic-errors -O0 -ggdb
 CXXFLAGS=-std=c++2a
 LDFLAGS=
 LDLIBS=
