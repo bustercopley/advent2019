@@ -43,7 +43,7 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.rc | $(OBJDIR)
 $(OBJDIR)/%.gch: $(SRCDIR)/% | $(OBJDIR)
 	$(CXX) -MMD $(CPPFLAGS) $(CFLAGS) $(CXXFLAGS) -x c++-header $< -c -o $@
 
-$(OBJDIR)/%.exe: $(OBJDIR)/%.o
+$(OBJDIR)/%.exe: $(OBJDIR)/%.o $(OBJECTS:%=$(OBJDIR)/%)
 	$(CXX) $(CFLAGS) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
 %.exe: $(OBJDIR)/%.exe
