@@ -184,30 +184,78 @@ std::pair<bool, int> run(
   __builtin_unreachable();
 }
 
-void part_one(const program_t &program, bool verbose) {
+int one(const program_t &program, const int (&i)[5], bool verbose) {
+  if (verbose) {
+    std::cout << "Phase settings:";
+    for (int n = 0; n != 5; ++n) {
+      std::cout << " " << i[n];
+    }
+    std::cout << "\n";
+  }
+  int result = 0;
+  for (int n = 0; n != 5; ++n) {
+    auto p = program;
+    int pc = 0;
+    std::vector<int> inputs = {i[n], result};
+    auto [halt, new_result] = run(p, pc, inputs, verbose);
+    result = new_result;
+    if (result == -1) {
+      std::cout << "Quit\n";
+      break;
+    }
+  }
+  return result;
+}
+
+int two(const program_t &program, const int (&pi)[5], bool verbose) {
+  int i[5];
+  for (int n = 0; n != 5; ++n) {
+    int x[5] = {5, 6, 7, 8, 9};
+    i[n] = x[pi[n]];
+  }
+  if (verbose) {
+    std::cout << "Phase settings:";
+    for (int n = 0; n != 5; ++n) {
+      std::cout << " " << i[n];
+    }
+    std::cout << "\n";
+  }
+  std::tuple<std::vector<int>, int, program_t> amps[5];
+  for (int n = 0; n != 5; ++n) {
+    std::get<0>(amps[n]).push_back(i[n]);
+    std::get<2>(amps[n]) = program;
+  }
+  std::get<0>(amps[0]).push_back(0);
+  int n = 0;
+  while (std::get<1>(amps[n]) != -1) {
+    if (verbose) {
+      std::cout << "Resuming amp " << n << std::endl;
+    }
+    auto [halt, result] = run(std::get<2>(amps[n]), std::get<1>(amps[n]),
+      std::get<0>(amps[n]), verbose);
+    n = (n + 1) % 5;
+    std::get<0>(amps[n]).push_back(result);
+  }
+  int result = std::get<0>(amps[n])[0];
+  if (n || verbose) {
+    std::cout << "Sent input " << std::get<0>(amps[n])[0] << " to halted amp "
+              << n << std::endl;
+  }
+  if (n) {
+    throw "WRONG AMP";
+  }
+  return result;
+}
+
+typedef int (*part_t)(
+  const program_t &program, const int (&i)[5], bool verbose);
+
+void do_part(const program_t &program, part_t part, bool verbose) {
   int i[5] = {0, 1, 2, 3, 4};
   int best_i[5];
   int best_result = -1;
   while (std::next_permutation(&i[0], &i[5])) {
-    if (verbose) {
-      std::cout << "Phase settings:";
-      for (int n = 0; n != 5; ++n) {
-        std::cout << " " << i[n];
-      }
-      std::cout << "\n";
-    }
-    int result = 0;
-    for (int n = 0; n != 5; ++n) {
-      auto p = program;
-      int pc = 0;
-      std::vector<int> inputs = {i[n], result};
-      auto [halt, new_result] = run(p, pc, inputs, verbose);
-      result = new_result;
-      if (result == -1) {
-        std::cout << "Quit\n";
-        break;
-      }
-    }
+    int result = part(program, i, false);
     if (result > best_result) {
       best_result = result;
       for (int n = 0; n != 5; ++n) {
@@ -215,55 +263,8 @@ void part_one(const program_t &program, bool verbose) {
       }
     }
   }
-  std::cout << "Best result " << best_result << " (input ";
-  for (int n = 0; n != 5; ++n) {
-    std::cout << best_i[n];
-  }
-  std::cout << ")" << std::endl;
-}
-
-void part_two(const program_t &program, bool verbose) {
-  int i[5] = {5, 6, 7, 8, 9};
-  int best_i[5];
-  int best_result = -1;
-  while (std::next_permutation(&i[0], &i[5])) {
-    if (verbose) {
-      std::cout << "Phase settings:";
-      for (int n = 0; n != 5; ++n) {
-        std::cout << " " << i[n];
-      }
-      std::cout << "\n";
-    }
-    std::tuple<std::vector<int>, int, program_t> amps[5];
-    for (int n = 0; n != 5; ++n) {
-      std::get<0>(amps[n]).push_back(i[n]);
-      std::get<2>(amps[n]) = program;
-    }
-    std::get<0>(amps[0]).push_back(0);
-    int n = 0;
-    while (std::get<1>(amps[n]) != -1) {
-      if (verbose) {
-        std::cout << "Resuming amp " << n << std::endl;
-      }
-      auto [halt, result] = run(std::get<2>(amps[n]), std::get<1>(amps[n]),
-        std::get<0>(amps[n]), verbose);
-      n = (n + 1) % 5;
-      std::get<0>(amps[n]).push_back(result);
-    }
-    int result = std::get<0>(amps[n])[0];
-    if (n || verbose) {
-      std::cout << "Sent input " << std::get<0>(amps[n])[0] << " to halted amp "
-                << n << std::endl;
-    }
-    if (n) {
-      throw "WRONG AMP";
-    }
-    if (result > best_result) {
-      best_result = result;
-      for (int n = 0; n != 5; ++n) {
-        best_i[n] = i[n];
-      }
-    }
+  if (verbose) {
+    part(program, best_i, true);
   }
   std::cout << "Best result " << best_result << " (input ";
   for (int n = 0; n != 5; ++n) {
@@ -297,24 +298,25 @@ std::vector<program_t> read(const char *filename) {
 
 int CALLBACK _tWinMain(HINSTANCE, HINSTANCE, LPTSTR, int) {
   try {
+    bool verbose = false;
     auto test_programs = read("7-test.data");
     auto test_programs_2 = read("7-test2.data");
     auto programs = read("7.data");
     for (const auto &program : test_programs) {
       std::cout << "Part One Test\n";
-      part_one(program, false);
+      do_part(program, one, false);
     }
     for (const auto &program : programs) {
       std::cout << "Part One\n";
-      part_one(program, false);
+      do_part(program, one, verbose);
     }
     for (const auto &program : test_programs_2) {
       std::cout << "Part Two Test\n";
-      part_two(program, false);
+      do_part(program, two, false);
     }
     for (const auto &program : programs) {
       std::cout << "Part Two\n";
-      part_two(program, false);
+      do_part(program, two, verbose);
     }
     return 0;
   } catch (const char *e) {
