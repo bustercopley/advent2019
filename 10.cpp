@@ -1,5 +1,6 @@
 #include "precompiled.h"
 #include <cmath>
+#include <set>
 
 struct asteroid_t {
   int x, y;
@@ -30,7 +31,7 @@ bool between(asteroid_t a, asteroid_t b, asteroid_t c) {
   } else if ((b.x - a.x) * (c.y - a.y) != (c.x - a.x) * (b.y - a.y)) {
     return false;
   } else {
-    return (a.x < b.x && b.x < c.x) || (a.x > b.x && b.x > c.x);
+    return (a.x < b.x && b.x < c.x) || (c.x < b.x && b.x < a.x);
   }
 }
 
@@ -61,7 +62,7 @@ asteroid_t part_one(field_t field) {
       best = a;
     }
   }
-  std::cout << best_score << ", (" << best.x << "," << best.y << ")"
+  std::cout << best_score << " visible from " << best.x << "," << best.y
             << std::endl;
   return best;
 }
@@ -77,20 +78,19 @@ void part_two(field_t field) {
         order[-std::atan2((double)(b.x - a.x), (double)(b.y - a.y))] = i;
       }
     }
+    std::set<std::size_t> vaporized;
     for (auto pair : order) {
       auto b = field[pair.second];
+      vaporized.insert(pair.second);
       if (++n == 200) {
-        std::cout << "(" << b.x << "," << b.y << ")" << std::endl;
+        std::cout << "200th vaporized " << b.x << "," << b.y << std::endl;
       }
     }
-    std::vector<std::size_t> destroyed;
-    for (auto pair : order) {
-      destroyed.push_back(pair.second);
-    }
-    std::sort(destroyed.begin(), destroyed.end(), std::greater());
-    for (auto i : destroyed) {
-      field.erase(field.begin() + i, field.begin() + i + 1);
-    }
+    field.erase(std::remove_if(field.begin(), field.end(),
+                  [&vaporized, &field](const asteroid_t &a) {
+                    return vaporized.contains(&a - &field[0]);
+                  }),
+      field.end());
   }
 }
 
