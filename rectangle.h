@@ -7,7 +7,12 @@
 template <typename T> struct rectangle_t {
   void set(int x, int y, T value);
   std::pair<bool, T> get(int x, int y) const;
+
+  // Display bottom up, f(bool is_set, int64_t value) -> char;
   template <typename F> std::ostream &put(std::ostream &stream, F &&f) const;
+
+  // Display top down, f(bool is_set, int64_t value) -> char;
+  template <typename F> std::ostream &put1(std::ostream &stream, F &&f) const;
 
 private:
   typedef std::map<int, T> row_t;
@@ -39,6 +44,18 @@ inline std::pair<bool, T> rectangle_t<T>::get(int x, int y) const {
 template <typename T>
 template <typename F>
 inline std::ostream &rectangle_t<T>::put(std::ostream &stream, F &&f) const {
+  for (int y = maxy; y != miny - 1; --y) {
+    for (int x = minx; x != maxx + 1; ++x) {
+      std::cout << std::apply(f, get(x, y));
+    }
+    stream << "\\\n";
+  }
+  return stream;
+}
+
+template <typename T>
+template <typename F>
+inline std::ostream &rectangle_t<T>::put1(std::ostream &stream, F &&f) const {
   for (int y = maxy; y != miny - 1; --y) {
     for (int x = minx; x != maxx + 1; ++x) {
       std::cout << std::apply(f, get(x, y));
