@@ -28,7 +28,8 @@ std::istream &read(std::istream &in, reactions_t &reactions) {
   return in;
 }
 
-int64_t ore_remaining(const reactions_t &reactions, int64_t fuel_required) {
+int64_t ore_remaining(
+  const reactions_t &reactions, int64_t fuel_required, bool verbose) {
   std::map<std::string, int64_t> got = {
     {"FUEL", -fuel_required}, {"ORE", 1000000000000}};
 
@@ -40,9 +41,20 @@ int64_t ore_remaining(const reactions_t &reactions, int64_t fuel_required) {
       if (auto iter = reactions.find(product); iter != std::end(reactions)) {
         const auto &[yield, reagents] = iter->second;
         int64_t multiplier = (-1 - product_available) / yield + 1;
+        if (verbose) {
+          std::cout << "Produce " << (multiplier * yield) << " " << product
+                    << ", consume";
+        }
         product_available += multiplier * yield;
         for (const auto &[reagent, reagent_consumed] : reagents) {
+          if (verbose) {
+            std::cout << " " << (multiplier * reagent_consumed) << " "
+                      << reagent;
+          }
           got[reagent] -= multiplier * reagent_consumed;
+        }
+        if (verbose) {
+          std::cout << std::endl;
         }
       } else {
         return -1;
@@ -53,8 +65,8 @@ int64_t ore_remaining(const reactions_t &reactions, int64_t fuel_required) {
   }
 }
 
-void part_one(const reactions_t &reactions) {
-  int64_t n = ore_remaining(reactions, 1);
+void part_one(const reactions_t &reactions, bool verbose) {
+  int64_t n = ore_remaining(reactions, 1, verbose);
   std::cout << "Need " << n << " ORE" << std::endl;
 }
 
@@ -63,7 +75,7 @@ void part_two(const reactions_t &reactions) {
   int64_t hi = 10000000000;
   while (hi - lo > 1) {
     int64_t mid = lo + (hi - lo) / 2;
-    if (ore_remaining(reactions, mid) < 0) {
+    if (ore_remaining(reactions, mid, false) < 0) {
       hi = mid;
     } else {
       lo = mid;
@@ -72,21 +84,21 @@ void part_two(const reactions_t &reactions) {
   std::cout << "Made " << lo << " FUEL" << std::endl;
 }
 
-void do_file(const char *filename) {
+void do_file(const char *filename, bool verbose) {
   reactions_t reactions;
   std::ifstream in(filename);
   read(in, reactions);
   if (!std::empty(reactions)) {
     std::cout << "\nRead reactions from " << filename << std::endl;
-    part_one(reactions);
+    part_one(reactions, verbose);
     part_two(reactions);
   }
 }
 
 int CALLBACK _tWinMain(HINSTANCE, HINSTANCE, LPTSTR, int) {
   try {
-    do_file("14-test.data");
-    do_file("14.data");
+    do_file("14-test.data", true);
+    do_file("14.data", false);
     return 0;
   } catch (const char *e) {
     std::cout << e << std::endl;
