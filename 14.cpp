@@ -35,7 +35,7 @@ int64_t ore_remaining(const reactions_t &reactions, int64_t fuel_required) {
     if (pair.second < 0) {
       if (auto iter = reactions.find(pair.first); iter != reactions.end()) {
         auto [yield, reagents] = iter->second;
-        int64_t multiplier = std::ceil((double)(-pair.second) / (double)yield);
+        int64_t multiplier = (-1 - pair.second) / yield + 1;
         pair.second += multiplier * yield;
         for (const auto &pair1: reagents) {
           got[pair1.first] -= multiplier * pair1.second;
