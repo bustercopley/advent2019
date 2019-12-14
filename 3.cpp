@@ -1,5 +1,5 @@
 #include "precompiled.h"
-#include <cmath>
+#include "rectangle.h"
 
 struct stretch_t {
   int x, y;
@@ -7,133 +7,94 @@ struct stretch_t {
 
 using wire_t = std::vector<stretch_t>;
 
-void part_one(const std::array<wire_t, 2> &wires, bool verbose) {
-  int minx = 0, miny = 0, maxx = 0, maxy = 0;
+template <typename T> int signum(T val) { return (T(0) < val) - (val < T(0)); }
+
+void part_one(const wire_t (&wires)[2], bool verbose) {
+  int best = 1 << 30;
+  rectangle_t<int> grid;
   for (int n = 0; n != 2; ++n) {
     int x = 0, y = 0;
-    for (const auto & stretch: wires[n]) {
-      x += stretch.x;
-      y += stretch.y;
-      minx = std::min(x, minx);
-      miny = std::min(y, miny);
-      maxx = std::max(x, maxx);
-      maxy = std::max(y, maxy);
-      // std::cout << "+(" << stretch.x << " " << stretch.y << ") to ("
-      //           << x << " " << y << "), minx "
-      //           << minx << " miny " << miny << " maxy "
-      //           << maxy << " maxx " << maxx << std::endl;
-    }
-  }
-  // std::cout << "minx " << minx << " miny " << miny << " maxy " << maxy << " maxx " << maxx << std::endl;
-  std::vector<std::vector<int>> grid(maxx - minx + 1);
-  for (auto & column: grid) {
-    column.resize(maxy - miny + 1);
-  }
-  for (int n = 0; n != 2; ++n) {
-    // std::cout << "Wire " << n << std::endl;
-    int x = -minx, y = -miny;
-    grid[x][y] |= (1 << n);
-    for (const auto & stretch: wires[n]) {
-      int d = std::abs(stretch.x) + std::abs(stretch.y);
-      int u = (stretch.x > 0 ? 1 : stretch.x < 0 ? -1 : 0);
-      int v = (stretch.y > 0 ? 1 : stretch.y < 0 ? -1 : 0);
-      // std::cout << "Stretch length " << d << " direction " << u << " " << v << std::endl;
-      for (int i = 0; i != d; ++ i) {
-        x += u;
-        y += v;
-        //std::cout << x << " " << y << std::endl;
-        grid[x][y] |= (1 << n);
+    grid.set(x, y, grid.get(x, y).second | (1 << n));
+    for (const auto &stretch : wires[n]) {
+      int x1 = x + stretch.x;
+      int y1 = y + stretch.y;
+      while (x != x1 || y != y1) {
+        x = x + signum(stretch.x);
+        y = y + signum(stretch.y);
+        int value = grid.get(x, y).second | (1 << n);
+        if (value == 3) {
+          best = std::min(best, std::abs(x) + std::abs(y));
+        }
+        grid.set(x, y, value);
       }
     }
   }
-  int mind = 1 << 30;
-  for (int x = 0; x != maxx - minx + 1; ++x) {
-    for (int y = 0; y != maxy - miny + 1; ++y) {
-      int d = std::abs(x + minx) + std::abs(y + miny);
-      if (d && grid[x][y] == 3) {
-        mind = std::min(d, mind);
-      }
-    }
-  }
-  std::cout << "Manhattan distance " << mind << std::endl;
+  std::cout << "Manhattan distance " << best << std::endl;
 }
 
-void part_two(const std::array<wire_t, 2> &wires, bool verbose) {
-  int minx = 0, miny = 0, maxx = 0, maxy = 0;
+void part_two(const wire_t (&wires)[2], bool verbose) {
+  int best = 1 << 30;
+  rectangle_t<std::pair<int, int>> grid;
   for (int n = 0; n != 2; ++n) {
     int x = 0, y = 0;
-    for (const auto & stretch: wires[n]) {
-      x += stretch.x;
-      y += stretch.y;
-      minx = std::min(x, minx);
-      miny = std::min(y, miny);
-      maxx = std::max(x, maxx);
-      maxy = std::max(y, maxy);
-      // std::cout << "+(" << stretch.x << " " << stretch.y << ") to ("
-      //           << x << " " << y << "), minx "
-      //           << minx << " miny " << miny << " maxy "
-      //           << maxy << " maxx " << maxx << std::endl;
-    }
-  }
-  // std::cout << "minx " << minx << " miny " << miny << " maxy " << maxy << " maxx " << maxx << std::endl;
-  std::vector<std::vector<std::array<int, 2>>> grid(maxx - minx + 1);
-  for (auto & column: grid) {
-    column.resize(maxy - miny + 1);
-  }
-  for (int n = 0; n != 2; ++n) {
-    // std::cout << "Wire " << n << std::endl;
-    int x = -minx, y = -miny, t = 0;
-    for (const auto & stretch: wires[n]) {
-      int d = std::abs(stretch.x) + std::abs(stretch.y);
-      int u = (stretch.x > 0 ? 1 : stretch.x < 0 ? -1 : 0);
-      int v = (stretch.y > 0 ? 1 : stretch.y < 0 ? -1 : 0);
-      // std::cout << "Stretch length " << d << " direction " << u << " " << v << std::endl;
-      for (int i = 0; i != d; ++ i) {
-        x += u;
-        y += v;
-        ++t;
-        //std::cout << x << " " << y << std::endl;
-        if (!grid[x][y][n]) {
-          grid[x][y][n] = t;
+    auto [set, value] = grid.get(x, y);
+    auto [flags, delay] = value;
+    grid.set(x, y, {flags | (1 << n), delay});
+    int new_delay = 0;
+    for (const auto &stretch : wires[n]) {
+      int x1 = x + stretch.x;
+      int y1 = y + stretch.y;
+      while (x != x1 || y != y1) {
+        ++new_delay;
+        x = x + signum(stretch.x);
+        y = y + signum(stretch.y);
+        auto [set, value] = grid.get(x, y);
+        auto [flags, delay] = value;
+        if ((flags & (1 << n)) == 0) {
+          flags |= (1 << n);
+          delay += new_delay;
+          grid.set(x, y, {flags, delay});
+          if (flags == 3) {
+            best = std::min(best, delay);
+          }
         }
       }
     }
   }
-  int mind = 1 << 30;
-  for (int x = 0; x != maxx - minx + 1; ++x) {
-    for (int y = 0; y != maxy - miny + 1; ++y) {
-      if (grid[x][y][0] && grid[x][y][1]) {
-        int d = grid[x][y][0] + grid[x][y][1];
-        mind = std::min(d, mind);
+  if (verbose) {
+    grid.put(std::cout, [](bool is_set, const std::pair<int, int> &value) {
+      switch(value.first) {
+      case 1: return 'X';
+      case 2: return '+';
+      case 3: return 'o';
+      default: return ' ';
       }
-    }
+    });
   }
-  std::cout << "Timing delay " << mind << std::endl;
+  std::cout << "Signal delay " << best << std::endl;
 }
 
-
-
-std::pair<std::array<wire_t, 2>, bool> read(std::istream & stream) {
-  std::pair<std::array<wire_t, 2>, bool> result;
+std::istream &read(std::istream &stream, wire_t (&wires)[2]) {
   std::regex regex1("([LRUD])(\\d+)");
   std::string s;
-  for (int n = 0; n != 2; ++ n) {
-    // std::cout << "Wire " << n << std::endl;
+  wires[0] = {};
+  wires[1] = {};
+  for (int n = 0; n != 2; ++n) {
     if (!std::getline(stream, s)) {
-      result.second = false;
-      return result;
+      return stream;
     }
-    wire_t & wire = result.first[n];
+    wire_t &wire = wires[n];
     const char *begin = std::data(s);
     const char *end = begin + std::size(s);
     std::cmatch m;
 
     while (std::regex_search(begin, end, m, regex1)) {
-      auto & stretch = wire.emplace_back();
+      auto &stretch = wire.emplace_back();
       int direction, length;
       direction = m[1].first[0];
       length = 0; // !
-      if (auto [p, ec] = std::from_chars(m[2].first, m[2].second, length); ec != std::errc()) {
+      if (auto [p, ec] = std::from_chars(m[2].first, m[2].second, length);
+          ec != std::errc()) {
         std::cout << "Error! " << std::make_error_code(ec) << std::endl;
         std::exit(1);
       }
@@ -155,48 +116,23 @@ std::pair<std::array<wire_t, 2>, bool> read(std::istream & stream) {
         stretch.y = -length;
         break;
       }
-      // std::cout << char(direction) << length << ", x " << stretch.x << " y " << stretch.y << std::endl;
-
       begin = m[1].second;
     }
   }
-  result.second = true;
-  return result;
+  return stream;
+}
+
+void do_file(const char *filename, bool verbose) {
+  std::ifstream in(filename);
+  wire_t wires[2];
+  while (read(in, wires)) {
+    part_one(wires, verbose);
+    part_two(wires, verbose);
+  }
 }
 
 int CALLBACK _tWinMain(HINSTANCE, HINSTANCE, LPTSTR, int) {
-  {
-    std::ifstream in("3-test.data");
-    while (true) {
-      if (auto [wire, ok] = read(in); ok) {
-        part_one(wire, true);
-        part_two(wire, true);
-      }
-      else {
-        break;
-      }
-    }
-  }
-
-  {
-    std::ifstream in("3.data");
-    while (true) {
-      if (auto [wire, ok] = read(in); ok) {
-        part_one(wire, true);
-        part_two(wire, true);
-      }
-      else {
-        break;
-      }
-    }
-  }
-
-  // {
-  //   bool verbose = true;
-  //   auto wires = read("3.data");
-  //   part_one(wires, verbose);
-  //   part_two(wires, false);
-  // }
-
+  do_file("3-test.data", true);
+  do_file("3.data", false);
   return 0;
 }
