@@ -11,18 +11,18 @@ std::istream &read(std::istream &in, reactions_t &reactions) {
     const char *begin = std::data(line);
     const char *end = begin + std::size(line);
     std::cmatch m;
-    std::vector<pair_t> pairs;
+    std::vector<pair_t> reagents;
     while (std::regex_search(begin, end, m, regex1)) {
-      pair_t pair;
-      std::from_chars(m[1].first, m[1].second, pair.second);
-      pair.first = std::string(m[2].first, m[2].second);
-      pairs.push_back(pair);
+      auto &[reagent, reagent_consumed] = reagents.emplace_back();
+      std::from_chars(m[1].first, m[1].second, reagent_consumed);
+      reagent.assign(m[2].first, m[2].second);
       begin = m[1].second;
     }
-    if (std::size(pairs)) {
-      pair_t pair = pairs.back();
-      pairs.erase(pairs.end() - 1, pairs.end());
-      reactions[pair.first] = {pair.second, pairs};
+    if (std::size(reagents)) {
+      auto [product, product_produced] = std::move(reagents.back());
+      reagents.erase(reagents.end() - 1, reagents.end());
+      reactions.insert_or_assign(std::move(product),
+        std::make_pair(product_produced, std::move(reagents)));
     }
   }
   return in;
@@ -31,23 +31,26 @@ std::istream &read(std::istream &in, reactions_t &reactions) {
 int64_t ore_remaining(const reactions_t &reactions, int64_t fuel_required) {
   std::map<std::string, int64_t> got = {
     {"FUEL", -fuel_required}, {"ORE", 1000000000000}};
-loop:
-  for (auto &pair : got) {
-    if (pair.second < 0) {
-      if (auto iter = reactions.find(pair.first); iter != reactions.end()) {
-        auto [yield, reagents] = iter->second;
-        int64_t multiplier = (-1 - pair.second) / yield + 1;
-        pair.second += multiplier * yield;
-        for (const auto &pair1 : reagents) {
-          got[pair1.first] -= multiplier * pair1.second;
+
+  while (true) {
+    if (auto iter = std::find_if(std::begin(got), std::end(got),
+          [](const auto &pair) { return pair.second < 0; });
+        iter != std::end(got)) {
+      auto &[product, product_available] = *iter;
+      if (auto iter = reactions.find(product); iter != std::end(reactions)) {
+        const auto &[yield, reagents] = iter->second;
+        int64_t multiplier = (-1 - product_available) / yield + 1;
+        product_available += multiplier * yield;
+        for (const auto &[reagent, reagent_consumed] : reagents) {
+          got[reagent] -= multiplier * reagent_consumed;
         }
-        goto loop;
       } else {
         return -1;
       }
+    } else {
+      return (1000000000000) - got["ORE"];
     }
   }
-  return (1000000000000) - got["ORE"];
 }
 
 void part_one(const reactions_t &reactions) {
