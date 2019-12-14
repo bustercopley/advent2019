@@ -1,5 +1,4 @@
 #include "precompiled.h"
-#include <cmath>
 
 constexpr int width = 25;
 constexpr int height = 6;

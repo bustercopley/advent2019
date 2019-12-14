@@ -1,5 +1,4 @@
 #include "precompiled.h"
-#include <cmath>
 
 void part_one(const std::vector<int> &masses, bool verbose) {
   std::cout << "Module count " << std::size(masses) << std::endl;

@@ -1,5 +1,4 @@
 #include "precompiled.h"
-#include <cmath>
 
 typedef std::pair<std::string, int64_t> pair_t;
 typedef std::map<std::string, std::pair<int64_t, std::vector<pair_t>>> reactions_t;

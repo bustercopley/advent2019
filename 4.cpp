@@ -1,5 +1,4 @@
 #include "precompiled.h"
-#include <cmath>
 
 // --- Day 4: Secure Container ---
 

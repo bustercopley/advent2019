@@ -1,5 +1,4 @@
 #include "precompiled.h"
-#include <cmath>
 #include <set>
 
 void part_one(const std::map<std::string, std::string> &orbits) {
