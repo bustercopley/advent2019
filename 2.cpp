@@ -29,7 +29,7 @@ void part_one(const program_t &program, bool verbose) {
   std::cout << "Part One, answer " << p[0] << std::endl;
 }
 
-void part_two(const program_t & program, bool verbose) {
+void part_two(const program_t &program, bool verbose) {
   for (int a = 0; a != 100; ++a) {
     for (int b = 0; b != 100; ++b) {
       program_t p = program;

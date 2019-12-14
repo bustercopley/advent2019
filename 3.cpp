@@ -63,11 +63,15 @@ void part_two(const wire_t (&wires)[2], bool verbose) {
   }
   if (verbose) {
     grid.put(std::cout, [](bool is_set, const std::pair<int, int> &value) {
-      switch(value.first) {
-      case 1: return 'X';
-      case 2: return '+';
-      case 3: return 'o';
-      default: return ' ';
+      switch (value.first) {
+      case 1:
+        return 'X';
+      case 2:
+        return '+';
+      case 3:
+        return 'o';
+      default:
+        return ' ';
       }
     });
   }

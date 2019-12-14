@@ -1,7 +1,8 @@
 #include "precompiled.h"
 
 typedef std::pair<std::string, int64_t> pair_t;
-typedef std::map<std::string, std::pair<int64_t, std::vector<pair_t>>> reactions_t;
+typedef std::map<std::string, std::pair<int64_t, std::vector<pair_t>>>
+  reactions_t;
 
 std::istream &read(std::istream &in, reactions_t &reactions) {
   std::regex regex1("([0-9]+) ([A-Z]+)");
@@ -28,20 +29,20 @@ std::istream &read(std::istream &in, reactions_t &reactions) {
 }
 
 int64_t ore_remaining(const reactions_t &reactions, int64_t fuel_required) {
-  std::map<std::string, int64_t> got = {{"FUEL", -fuel_required}, {"ORE", 1000000000000}};
- loop:
-  for (auto& pair: got) {
+  std::map<std::string, int64_t> got = {
+    {"FUEL", -fuel_required}, {"ORE", 1000000000000}};
+loop:
+  for (auto &pair : got) {
     if (pair.second < 0) {
       if (auto iter = reactions.find(pair.first); iter != reactions.end()) {
         auto [yield, reagents] = iter->second;
         int64_t multiplier = (-1 - pair.second) / yield + 1;
         pair.second += multiplier * yield;
-        for (const auto &pair1: reagents) {
+        for (const auto &pair1 : reagents) {
           got[pair1.first] -= multiplier * pair1.second;
         }
         goto loop;
-      }
-      else {
+      } else {
         return -1;
       }
     }
@@ -61,8 +62,7 @@ void part_two(const reactions_t &reactions) {
     int64_t mid = lo + (hi - lo) / 2;
     if (ore_remaining(reactions, mid) < 0) {
       hi = mid;
-    }
-    else {
+    } else {
       lo = mid;
     }
   }
