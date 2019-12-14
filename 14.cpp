@@ -60,7 +60,7 @@ int64_t ore_remaining(
         return -1;
       }
     } else {
-      return (1000000000000) - got["ORE"];
+      return 1000000000000 - got["ORE"];
     }
   }
 }
