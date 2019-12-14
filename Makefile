@@ -1,9 +1,10 @@
 SHELL=cmd
 PATH=c:\msys64\mingw64\bin
-FILENAMES=1.exe 2.exe 3.exe
+FILENAMES=1.exe 2.exe 3.exe 4.exe 5.exe 6.exe 7.exe 8.exe 9.exe 10.exe 11.exe 12.exe 13.exe 14.exe
 FILENAME=1.exe
 SRCDIR=.
 OBJDIR=.obj
+OBJECTS=intcode.o
 ARGS=
 
 PCH=pch
