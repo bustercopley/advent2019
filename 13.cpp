@@ -46,8 +46,9 @@ void part_two(program_t program, bool verbose, bool verbose1) {
       int count = 0;
       surface.put1(
         std::cout, [&count](bool is_set [[maybe_unused]], int64_t value) {
-          if (value == 2)
+          if (value == 2) {
             ++count;
+          }
           return " #=-O"[value];
         });
       std::cout << score << "\n";
