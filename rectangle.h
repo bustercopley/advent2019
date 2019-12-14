@@ -8,10 +8,10 @@ template <typename T> struct rectangle_t {
   void set(int x, int y, T value);
   std::pair<bool, T> get(int x, int y) const;
 
-  // Display bottom up, f(bool is_set, int64_t value) -> char;
+  // Display bottom up, f(bool is_set, T value) -> char;
   template <typename F> std::ostream &put(std::ostream &stream, F &&f) const;
 
-  // Display top down, f(bool is_set, int64_t value) -> char;
+  // Display top down, f(bool is_set, T value) -> char;
   template <typename F> std::ostream &put1(std::ostream &stream, F &&f) const;
 
 private:
