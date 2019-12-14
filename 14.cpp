@@ -1,8 +1,8 @@
 #include "precompiled.h"
 #include <cmath>
 
-typedef std::pair<std::string, int> pair_t;
-typedef std::map<std::string, std::pair<int, std::vector<pair_t>>> reactions_t;
+typedef std::pair<std::string, int64_t> pair_t;
+typedef std::map<std::string, std::pair<int64_t, std::vector<pair_t>>> reactions_t;
 
 std::istream &read(std::istream &in, reactions_t &reactions) {
   std::regex regex1("([0-9]+) ([A-Z]+)");
@@ -28,20 +28,14 @@ std::istream &read(std::istream &in, reactions_t &reactions) {
   return in;
 }
 
-void part_one(const reactions_t &reactions) {
-  std::map<std::string, int> got = {{"FUEL", -1}, {"ORE", 1<<30}};
+int64_t ore_remaining(const reactions_t &reactions, int64_t fuel_required) {
+  std::map<std::string, int64_t> got = {{"FUEL", -fuel_required}, {"ORE", 1000000000000}};
  loop:
-  for (const auto &pair: got) {
-    if (pair.second) {
-      std::cout << " " << pair.second << " " << pair.first;
-    }
-  }
-  std::cout << std::endl;
   for (auto& pair: got) {
     if (pair.second < 0) {
       if (auto iter = reactions.find(pair.first); iter != reactions.end()) {
         auto [yield, reagents] = iter->second;
-        int multiplier = std::ceil((double)(-pair.second) / (double)yield);
+        int64_t multiplier = std::ceil((double)(-pair.second) / (double)yield);
         pair.second += multiplier * yield;
         for (const auto &pair1: reagents) {
           got[pair1.first] -= multiplier * pair1.second;
@@ -49,11 +43,31 @@ void part_one(const reactions_t &reactions) {
         goto loop;
       }
       else {
-        throw "NO REACTION";
+        return -1;
       }
     }
   }
-  std::cout << "Needed " << ((1 << 30) - got["ORE"]) << " ORE" << std::endl;
+  return (1000000000000) - got["ORE"];
+}
+
+void part_one(const reactions_t &reactions) {
+  int64_t n = ore_remaining(reactions, 1);
+  std::cout << "Need " << n << " ORE" << std::endl;
+}
+
+void part_two(const reactions_t &reactions) {
+  int64_t lo = 1;
+  int64_t hi = 10000000000;
+  while (hi - lo > 1) {
+    int64_t mid = lo + (hi - lo) / 2;
+    if (ore_remaining(reactions, mid) < 0) {
+      hi = mid;
+    }
+    else {
+      lo = mid;
+    }
+  }
+  std::cout << "Made " << lo << " FUEL" << std::endl;
 }
 
 void do_file(const char *filename) {
@@ -63,7 +77,7 @@ void do_file(const char *filename) {
   if (!std::empty(reactions)) {
     std::cout << "\nRead reactions from " << filename << std::endl;
     part_one(reactions);
-    // part_two(moons, true);
+    part_two(reactions);
   }
 }
 
