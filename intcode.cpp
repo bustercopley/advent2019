@@ -77,11 +77,14 @@ std::array<int64_t, N> get_params(const program_t &program, int64_t opcode,
 
 int64_t run_until_output(program_t &program, int64_t &pc, int64_t &base,
   std::vector<int64_t> &inputs, bool verbose) {
-  return run_until_output(program, pc, base, [&inputs]() {
-    int64_t result = inputs[0];
-    inputs.erase(inputs.begin(), inputs.begin() + 1);
-    return result;
-  }, verbose);
+  return run_until_output(
+    program, pc, base,
+    [&inputs]() {
+      int64_t result = inputs[0];
+      inputs.erase(inputs.begin(), inputs.begin() + 1);
+      return result;
+    },
+    verbose);
 }
 
 int64_t run_until_output(program_t &program, int64_t &pc, int64_t &base,

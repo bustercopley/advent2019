@@ -21,12 +21,11 @@ template <typename T> struct rectangle_t {
 
   // Display top down, f(bool is_set, T value) -> D2D1::ColorF;
   template <typename F>
-  void put2(d2d_stuff_t &d2d_stuff, std::basic_string<WCHAR> &&str, F &&f);
+  void put2(d2d_stuff_t &d2d_stuff, const std::basic_string<WCHAR> &str, F &&f);
 
-  template <typename F>
-  void put0(F &&f) const;
+  template <typename F> void put0(F &&f) const;
 
- private:
+private:
   typedef std::map<int, T> row_t;
   std::map<int, row_t> matrix;
   int minx = 0, miny = 0, maxx = 0, maxy = 0;
@@ -84,7 +83,7 @@ inline std::ostream &rectangle_t<T>::put1(std::ostream &stream, F &&f) const {
 template <typename T>
 template <typename F>
 inline void rectangle_t<T>::put2(
-  d2d_stuff_t &d2d_stuff, std::basic_string<WCHAR> &&str, F &&f) {
+  d2d_stuff_t &d2d_stuff, const std::basic_string<WCHAR> &str, F &&f) {
   auto [width, height] = size();
   std::vector<int> colors(width * height);
   for (int y = miny; y != maxy + 1; ++y) {
@@ -94,7 +93,7 @@ inline void rectangle_t<T>::put2(
       colors[index] = std::apply(f, get(x, y));
     }
   }
-  d2d_stuff.enqueue(std::move(str), std::move(colors), width, height);
+  d2d_stuff.enqueue(str, std::move(colors), width, height);
 }
 
 template <typename T>
@@ -106,6 +105,5 @@ inline void rectangle_t<T>::put0(F &&f) const {
     }
   }
 }
-
 
 #endif

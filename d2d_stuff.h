@@ -12,7 +12,7 @@
 #include <vector>
 
 struct d2d_stuff_t {
-  void enqueue(std::basic_string<WCHAR> &&caption, std::vector<int> &&pixels,
+  void enqueue(const std::basic_string<WCHAR> &caption, std::vector<int> &&pixels,
     int width, int height);
   void render_frames(std::size_t thread_count, text_style::type caption_style,
     int caption_color_index);
@@ -20,6 +20,7 @@ struct d2d_stuff_t {
 private:
   std::vector<std::vector<int>> work;
   std::vector<std::basic_string<WCHAR>> captions;
+  std::vector<int> widths;
   void thread_function(int width, int height, std::size_t begin,
     std::size_t end, text_style::type caption_style, int caption_color_index);
   int max_width = 1, max_height = 1;
