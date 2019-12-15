@@ -25,13 +25,15 @@ COM_SMARTPTR_TYPEDEF(ID2D1GeometrySink);
 COM_SMARTPTR_TYPEDEF(ID2D1Geometry);
 COM_SMARTPTR_TYPEDEF(ID2D1GeometryGroup);
 COM_SMARTPTR_TYPEDEF(ID2D1EllipseGeometry);
-COM_SMARTPTR_TYPEDEF(ID2D1RectangleGeometry);
 COM_SMARTPTR_TYPEDEF(ID2D1TransformedGeometry);
 COM_SMARTPTR_TYPEDEF(IDWriteFactory);
 COM_SMARTPTR_TYPEDEF(IDWriteFactory1);
 COM_SMARTPTR_TYPEDEF(IDWriteFactory2);
 COM_SMARTPTR_TYPEDEF(IDWriteTextLayout);
 COM_SMARTPTR_TYPEDEF(IDWriteTextFormat);
+COM_SMARTPTR_TYPEDEF(IDWriteRenderingParams);
+COM_SMARTPTR_TYPEDEF(IDWriteRenderingParams1);
+COM_SMARTPTR_TYPEDEF(IDWriteRenderingParams2);
 
 enum class text_anchor { topleft, centre };
 
@@ -50,22 +52,33 @@ struct text_style {
 extern const text_style text_styles[text_style::count];
 
 struct d2d_t {
+  struct text_style_data {
+    IDWriteRenderingParamsPtr RenderingParams;
+    IDWriteTextFormatPtr TextFormat;
+  };
+
   d2d_t();
 
   ID2D1Factory1 *GetD2DFactory() { return D2DFactory; }
   IWICImagingFactory *GetWICImagingFactory() { return WICImagingFactory; }
   IDWriteFactory *GetDWriteFactory() { return DWriteFactory; }
+  decltype(auto) GetTextStyleData(text_style::type type) {
+    return styles_data[type];
+  }
 
 private:
   com_t com;
   IWICImagingFactoryPtr WICImagingFactory;
   ID2D1Factory1Ptr D2DFactory;
   IDWriteFactoryPtr DWriteFactory;
+  text_style_data styles_data[text_style::type::count];
 };
 
 struct d2d_thread_t {
   d2d_thread_t(d2d_t &d2d, int width, int height);
   void write_png(const WCHAR *filename);
+  void draw_text(const WCHAR *text, float x, float y, ID2D1Brush *Brush,
+                 text_style::type type, text_anchor anchor);
   ID2D1RenderTarget *GetRenderTarget() { return D2DRenderTarget; }
   ID2D1SolidColorBrushPtr CreateSolidBrush(D2D1::ColorF Color);
 

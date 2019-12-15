@@ -1,29 +1,14 @@
 #include "precompiled.h"
+#include "d2d.h"
 #include "intcode.h"
 #include "rectangle.h"
-#include "d2d.h"
 
-void part_one(program_t program, bool verbose, bool verbose1) {
-  rectangle_t<int64_t> surface;
-  program.resize(65536);
-  int64_t pc = 0, base = 0;
-  std::vector<int64_t> inputs;
-  while (true) {
-    int64_t x = run_until_output(program, pc, base, inputs, verbose);
-    if (pc == -1) {
-      break;
-    }
-    int64_t y = run_until_output(program, pc, base, inputs, verbose);
-    int64_t z = run_until_output(program, pc, base, inputs, verbose);
-    surface.set(x, y, z);
-  }
-  int count = 0;
-  surface.put1(std::cout, [&count](bool set, int64_t value) {
-    if (value == 2)
-      ++count;
-    return " #=-O"[value];
-  });
-  std::cout << count << std::endl;
+void paint(
+  d2d_stuff_t &d2d_stuff, rectangle_t<int64_t> &surface, int64_t score) {
+  std::basic_ostringstream<WCHAR> ostr;
+  ostr << L"Score " << score;
+  surface.put2(d2d_stuff, ostr.str(),
+    [](bool set, int64_t value) -> int { return value; });
 }
 
 void part_two(program_t program, bool verbose, bool verbose1) {
@@ -35,12 +20,12 @@ void part_two(program_t program, bool verbose, bool verbose1) {
   std::vector<int64_t> inputs;
   int ballx = -1;
   int paddlex = -1;
-  int frame_index = 0;
   d2d_stuff_t d2d_stuff;
-  int max_width = 0, max_height = 0;
   while (true) {
     int64_t x = run_until_output(program, pc, base, inputs, verbose);
     if (pc == -1) {
+      paint(d2d_stuff, surface, score);
+      std::cout << "Halt" << std::endl;
       break;
     }
     int64_t y = run_until_output(program, pc, base, inputs, verbose);
@@ -57,22 +42,11 @@ void part_two(program_t program, bool verbose, bool verbose1) {
       if (z == 4) {
         ballx = x;
         inputs = {(paddlex < ballx) - (paddlex > ballx)};
-        int count = 0;
-        auto [width, height] = surface.size();
-        max_width = std::max(max_width, width);
-        max_height = std::max(max_height, height);
-        surface.put2(d2d_stuff, frame_index++, [&count](bool set, int64_t value) -> int {
-          if (value == 2) {
-            ++count;
-          }
-          return value;
-        });
-        if (!count)
-          break;
+        paint(d2d_stuff, surface, score);
       }
     }
   }
-  d2d_stuff.render_frames(8, max_width, max_height);
+  d2d_stuff.render_frames(8);
 }
 
 int CALLBACK _tWinMain(HINSTANCE, HINSTANCE, LPTSTR, int) {

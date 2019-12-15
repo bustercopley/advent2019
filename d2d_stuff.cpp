@@ -7,13 +7,24 @@ struct BeginDrawGuard {
   ID2D1RenderTarget *r;
 };
 
-void d2d_stuff_t::render_frames(
-  std::size_t thread_count, int width, int height) {
+const text_style text_styles[text_style::count] = {
+  // For animated labels (semibold; no grid fit, no snap, vertical antialising).
+  {L"Calibri", 15.0f, DWRITE_FONT_WEIGHT_BOLD, DWRITE_FONT_STYLE_NORMAL,
+    DWRITE_FONT_STRETCH_NORMAL, DWRITE_RENDERING_MODE_NATURAL_SYMMETRIC,
+    DWRITE_GRID_FIT_MODE_DISABLED, D2D1_DRAW_TEXT_OPTIONS_NO_SNAP},
+  // For static labels (normal weight, grid fit, snap, no vertical antialising).
+  {L"Consolas", 12.0f, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL,
+    DWRITE_FONT_STRETCH_NORMAL, DWRITE_RENDERING_MODE_NATURAL,
+    DWRITE_GRID_FIT_MODE_ENABLED, D2D1_DRAW_TEXT_OPTIONS_NONE},
+};
+
+void d2d_stuff_t::render_frames(std::size_t thread_count) {
   std::vector<std::thread> threads;
   for (std::size_t i = 0; i != thread_count; ++i) {
     std::size_t begin = std::size(work) * i / thread_count;
     std::size_t end = std::size(work) * (i + 1) / thread_count;
-    threads.emplace_back(thread_function, this, width, height, begin, end);
+    threads.emplace_back(
+      thread_function, this, max_width, max_height, begin, end);
   }
   for (std::size_t i = 0; i != thread_count; ++i) {
     threads[i].join();
@@ -23,16 +34,17 @@ void d2d_stuff_t::render_frames(
 void d2d_stuff_t::thread_function(
   int width, int height, std::size_t frames_begin, std::size_t frames_end) {
   d2d_t d2d;
-  d2d_thread_t d2d_thread(d2d, 10 * width, 10 * height);
+  d2d_thread_t d2d_thread(d2d, 10 * width, 10 * height + 20);
   auto RenderTarget = d2d_thread.GetRenderTarget();
   const D2D1::ColorF brush_colors[] = {
-    {0.0f, 0.0f, 0.0f, 0.0f},
+    {1.0f, 1.0f, 1.0f, 1.0f},
     {1.0f, 0.0f, 0.0f, 1.0f},
     {0.0f, 1.0f, 0.0f, 1.0f},
     {0.0f, 0.0f, 1.0f, 1.0f},
     {0.0f, 1.0f, 1.0f, 1.0f},
     {1.0f, 0.0f, 1.0f, 1.0f},
     {1.0f, 1.0f, 0.0f, 1.0f},
+    {0.0f, 0.0f, 0.0f, 1.0f},
   };
   ID2D1SolidColorBrushPtr Brushes[std::size(brush_colors)];
   for (std::size_t i = 0; i != std::size(brush_colors); ++i) {
@@ -54,7 +66,10 @@ void d2d_stuff_t::thread_function(
             &rect, Brushes[pixels[index] % std::size(brush_colors)]);
         }
       }
+      d2d_thread.draw_text(captions[index].c_str(), 1.0f, height * 10.0f + 2.0f,
+        Brushes[7], text_style::legend, text_anchor::topleft);
     }
+
     std::basic_ostringstream<WCHAR> ostr;
     ostr << L".obj/frame-" << std::setfill(L'0') << std::setw(4) << index
          << L".png";
@@ -63,6 +78,10 @@ void d2d_stuff_t::thread_function(
   }
 }
 
-void d2d_stuff_t::enqueue(std::vector<int> &&pixels) {
+void d2d_stuff_t::enqueue(std::basic_string<WCHAR> &&caption,
+  std::vector<int> &&pixels, int width, int height) {
+  captions.push_back(std::move(caption));
   work.push_back(std::move(pixels));
+  max_width = std::max(max_width, width);
+  max_height = std::max(max_height, height);
 }

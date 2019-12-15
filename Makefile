@@ -53,7 +53,7 @@ $(OBJDIR)/%.exe: $(OBJDIR)/%.o $(OBJECTS:%=$(OBJDIR)/%)
 %.webm: %.exe
 	-del ".obj\frame-*.png"
 	$< $(ARGS)
-	ffmpeg -nostats -hide_banner -loglevel warning -thread_queue_size 1024 -i ".obj/frame-%04d.png" -c:v libvpx-vp9 -deadline good -crf 35 -b:v 0 -vf format=yuv420p -an -y output.webm
+	ffmpeg -nostats -hide_banner -loglevel warning -thread_queue_size 1024 -i ".obj/frame-%04d.png" -c:v libvpx-vp9 -deadline good -crf 31 -b:v 0 -vf format=yuv420p -an -y output.webm
 
 $(OBJDIR): ; -@md $(OBJDIR)
 
