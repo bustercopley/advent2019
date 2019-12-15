@@ -91,21 +91,22 @@ void do_it(program_t program) {
   // Just for fun, mark the shortest path.
   x = 0;
   y = 0;
+  direction = 0;
   time = maze.get(0, 0).second.time;
   maze.set(0, 0, {droid, -1});
   while (time) {
     // Find an adjacent square one step closer to the pump.
-    for (int direction = 0; direction != 4; ++direction) {
-      int nx = x + vectors[direction][0];
-      int ny = y + vectors[direction][1];
-      auto tile = maze.get(nx, ny).second;
-      if (tile.contents == oxygen && tile.time == time - 1) {
-        x = nx;
-        y = ny;
-        --time;
-        maze.set(x, y, {path, -1});
-        break;
-      }
+    int nx = x + vectors[direction][0];
+    int ny = y + vectors[direction][1];
+    auto tile = maze.get(nx, ny).second;
+    if (tile.contents == oxygen && tile.time == time - 1) {
+      x = nx;
+      y = ny;
+      --time;
+      maze.set(x, y, {path, -1});
+    }
+    else {
+      direction = (direction + 1) & 3;
     }
   }
 
