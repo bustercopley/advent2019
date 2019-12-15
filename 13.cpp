@@ -3,12 +3,16 @@
 #include "intcode.h"
 #include "rectangle.h"
 
-void paint(
+int paint(
   d2d_stuff_t &d2d_stuff, rectangle_t<int64_t> &surface, int64_t score) {
   std::basic_ostringstream<WCHAR> ostr;
   ostr << L"Score " << score;
-  surface.put2(d2d_stuff, ostr.str(),
-    [](bool set, int64_t value) -> int { return value; });
+  int count = 0;
+  surface.put2(d2d_stuff, ostr.str(), [&count](bool set, int64_t value) -> int {
+    count += value == 2;
+    return value;
+  });
+  return count;
 }
 
 void part_two(program_t program, bool verbose, bool verbose1) {
@@ -17,13 +21,18 @@ void part_two(program_t program, bool verbose, bool verbose1) {
   program[0] = 2;
   int64_t pc = 0, base = 0;
   int score = 0;
-  int ballx = -1;
+  int targetx = -1;
   int paddlex = -1;
   d2d_stuff_t d2d_stuff;
+  bool first_frame = true;
 
   auto get_input = [&]() {
-    paint(d2d_stuff, surface, score);
-    return (paddlex < ballx) - (paddlex > ballx);
+    int count = paint(d2d_stuff, surface, score);
+    if (first_frame) {
+      std::cout << "Blocks " << count << std::endl;
+      first_frame = false;
+    }
+    return (paddlex < targetx) - (paddlex > targetx);
   };
 
   while (true) {
@@ -44,7 +53,7 @@ void part_two(program_t program, bool verbose, bool verbose1) {
         paddlex = x;
       }
       if (z == 4) {
-        ballx = x;
+        targetx = x;
       }
     }
   }
