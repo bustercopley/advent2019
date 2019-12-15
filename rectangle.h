@@ -2,17 +2,27 @@
 #ifndef rectangle_h
 #define rectangle_h
 
+#include "d2d_stuff.h"
+
 // Interface.
+
 
 template <typename T> struct rectangle_t {
   void set(int x, int y, T value);
   std::pair<bool, T> get(int x, int y) const;
+  std::array<int, 2> size() const;
+  void d2d_init(std::size_t threads);
+  void d2d_wait();
 
   // Display bottom up, f(bool is_set, T value) -> char;
   template <typename F> std::ostream &put(std::ostream &stream, F &&f) const;
 
   // Display top down, f(bool is_set, T value) -> char;
   template <typename F> std::ostream &put1(std::ostream &stream, F &&f) const;
+
+  // Display top down, f(bool is_set, T value) -> D2D1::ColorF;
+  template <typename F>
+  void put2(d2d_stuff_t & d2d_stuff, int frame_index, F &&f);
 
 private:
   typedef std::map<int, T> row_t;
@@ -41,6 +51,10 @@ inline std::pair<bool, T> rectangle_t<T>::get(int x, int y) const {
   return {false, T{}};
 }
 
+template <typename T> inline std::array<int, 2> rectangle_t<T>::size() const {
+  return {maxx - minx + 1, maxy - miny + 1};
+}
+
 template <typename T>
 template <typename F>
 inline std::ostream &rectangle_t<T>::put(std::ostream &stream, F &&f) const {
@@ -56,13 +70,28 @@ inline std::ostream &rectangle_t<T>::put(std::ostream &stream, F &&f) const {
 template <typename T>
 template <typename F>
 inline std::ostream &rectangle_t<T>::put1(std::ostream &stream, F &&f) const {
-  for (int y = maxy; y != miny - 1; --y) {
+  for (int y = minx; y != maxy + 1; ++y) {
     for (int x = minx; x != maxx + 1; ++x) {
       std::cout << std::apply(f, get(x, y));
     }
     stream << "\\\n";
   }
   return stream;
+}
+
+template <typename T>
+template <typename F>
+inline void rectangle_t<T>::put2(d2d_stuff_t & d2d_stuff, int frame_index, F &&f) {
+  auto [width, height] = size();
+  std::vector<int> colors(width * height);
+  for (int y = minx; y != maxy + 1; ++y) {
+    std::size_t base = width * (y - minx);
+    for (int x = minx; x != maxx + 1; ++x) {
+      std::size_t index = base + (x - minx);
+      colors[index] = std::apply(f, get(x, y));
+    }
+  }
+  d2d_stuff.enqueue(std::move(colors));
 }
 
 #endif
