@@ -87,8 +87,8 @@ inline void rectangle_t<T>::put2(
   d2d_stuff_t &d2d_stuff, std::basic_string<WCHAR> &&str, F &&f) {
   auto [width, height] = size();
   std::vector<int> colors(width * height);
-  for (int y = minx; y != maxy + 1; ++y) {
-    std::size_t base = width * (y - minx);
+  for (int y = miny; y != maxy + 1; ++y) {
+    std::size_t base = width * (y - miny);
     for (int x = minx; x != maxx + 1; ++x) {
       std::size_t index = base + (x - minx);
       colors[index] = std::apply(f, get(x, y));
