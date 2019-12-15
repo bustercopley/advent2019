@@ -17,23 +17,27 @@ void part_two(program_t program, bool verbose, bool verbose1) {
   program[0] = 2;
   int64_t pc = 0, base = 0;
   int score = 0;
-  std::vector<int64_t> inputs;
   int ballx = -1;
   int paddlex = -1;
   d2d_stuff_t d2d_stuff;
+
+  auto get_input = [&]() {
+    paint(d2d_stuff, surface, score);
+    return (paddlex < ballx) - (paddlex > ballx);
+  };
+
   while (true) {
-    int64_t x = run_until_output(program, pc, base, inputs, verbose);
+    int64_t x = run_until_output(program, pc, base, get_input, verbose);
     if (pc == -1) {
       paint(d2d_stuff, surface, score);
-      std::cout << "Halt" << std::endl;
+      std::cout << "Score " << score << std::endl;
       break;
     }
-    int64_t y = run_until_output(program, pc, base, inputs, verbose);
-    int64_t z = run_until_output(program, pc, base, inputs, verbose);
+    int64_t y = run_until_output(program, pc, base, get_input, verbose);
+    int64_t z = run_until_output(program, pc, base, get_input, verbose);
 
     if (x == -1 && y == 0) {
       score = z;
-      std::cout << "Score " << score << std::endl;
     } else {
       surface.set(x, y, z);
       if (z == 3) {
@@ -41,12 +45,10 @@ void part_two(program_t program, bool verbose, bool verbose1) {
       }
       if (z == 4) {
         ballx = x;
-        inputs = {(paddlex < ballx) - (paddlex > ballx)};
-        paint(d2d_stuff, surface, score);
       }
     }
   }
-  d2d_stuff.render_frames(8);
+  d2d_stuff.render_frames(10);
 }
 
 int CALLBACK _tWinMain(HINSTANCE, HINSTANCE, LPTSTR, int) {

@@ -1,4 +1,5 @@
 #include "precompiled.h"
+#include "intcode.h"
 
 using program_t = std::vector<int64_t>;
 
@@ -76,6 +77,15 @@ std::array<int64_t, N> get_params(const program_t &program, int64_t opcode,
 
 int64_t run_until_output(program_t &program, int64_t &pc, int64_t &base,
   std::vector<int64_t> &inputs, bool verbose) {
+  return run_until_output(program, pc, base, [&inputs]() {
+    int64_t result = inputs[0];
+    inputs.erase(inputs.begin(), inputs.begin() + 1);
+    return result;
+  }, verbose);
+}
+
+int64_t run_until_output(program_t &program, int64_t &pc, int64_t &base,
+  std::function<int64_t()> get_input, bool verbose) {
   while (true) {
     if (pc < 0 || std::size_t(pc) >= std::size(program)) {
       throw "RANGE ERROR";
@@ -116,12 +126,8 @@ int64_t run_until_output(program_t &program, int64_t &pc, int64_t &base,
     }
 
     case 3: { // INPUT
-      if (std::empty(inputs)) {
-        throw "INPUT ERROR";
-      }
       auto p = get_params<1>(program, opcode, pc, base, 0, verbose);
-      int64_t input = inputs[0];
-      inputs.erase(inputs.begin(), inputs.begin() + 1);
+      int64_t input = get_input();
       if (verbose) {
         std::cout << "[" << p[0] << "] = input() = " << input << std::endl;
       }
