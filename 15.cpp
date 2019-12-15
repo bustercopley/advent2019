@@ -6,11 +6,11 @@
 int64_t directions[] = {4, 1, 3, 2}; // E, N, W, S
 int vectors[][2] = {{1, 0}, {0, 1}, {-1, 0}, {0, -1}};
 
-enum contents_t { unknown, wall, empty, oxygen, droid };
+enum contents_t { unknown, wall, empty, oxygen, droid, pump, path };
 
 struct tile_t {
   contents_t contents;
-  int distance;
+  int time;
 };
 
 void do_it(program_t program) {
@@ -20,12 +20,13 @@ void do_it(program_t program) {
   std::vector<int64_t> inputs;
   int direction = 0;
   int x = 0, y = 0;
-  int ox = 0, oy = 0;
-  int distance = 0, shortest = 0;
+  int px = 0, py = 0;
   int64_t output;
   maze.set(x, y, {empty, 0});
 
-  for (int n = 0; n != 10000; ++n) {
+  // Explore the maze for an arbitrary number of turns.
+  // Keep the droid's right hand on a wall.
+  for (int n = 0; n != 3000; ++n) {
     if (auto [is_set, tile] =
           maze.get(x + vectors[direction][0], y + vectors[direction][1]);
         tile.contents == wall) {
@@ -41,7 +42,7 @@ void do_it(program_t program) {
     y += vectors[direction][1];
 
     if (output == 0) {
-      // We hit a wall. Go back and turn left.
+      // We hit a wall. Update map, go back and turn left.
       maze.set(x, y, {wall, 0});
       x -= vectors[direction][0];
       y -= vectors[direction][1];
@@ -49,45 +50,25 @@ void do_it(program_t program) {
       continue;
     }
 
-    // We went forward.
-    ++distance;
-    if (auto [is_set, tile] = maze.get(x, y); is_set) {
-      distance = std::min(distance, tile.distance);
-    }
+    // We went forward. Update map and turn right.
     // Update map.
-    maze.set(x, y, {empty, distance});
+    maze.set(x, y, {empty, 0});
     if (output == 2) {
-      ox = x;
-      oy = y;
-      shortest = distance;
+      // We found the pump.
+      px = x;
+      py = y;
     }
     // Turn right.
     direction = (direction + 3) & 3;
   }
 
-  // Dump map.
-  maze.set(0, 0, {droid, 0});
-  maze.set(ox, oy, {oxygen, 0});
-  maze.put(std::cout, [](bool set, const tile_t &tile) {
-    switch (tile.contents) {
-    case empty:
-      return ' ';
-    case droid:
-      return 'D';
-    case oxygen:
-      return 'O';
-    default:
-      return '#';
-    }
-  });
-  std::cout << "Distance " << shortest << std::endl;
-
   // Fill with oxygen.
-  maze.set(0, 0, {empty, 0});
-  std::set<std::array<int, 2>> oxygens = {{ox, oy}};
-  int time = -1;
+  maze.set(px, py, {oxygen, 0});
+  std::set<std::array<int, 2>> oxygens = {{px, py}};
+  int time = 0;
   bool finished = false;
   while (!finished) {
+    ++time;
     finished = true;
     std::set<std::array<int, 2>> new_oxygens;
     for (auto tile : oxygens) {
@@ -95,23 +76,56 @@ void do_it(program_t program) {
         int x = tile[0] + vectors[direction][0];
         int y = tile[1] + vectors[direction][1];
         if (auto [is_set, tile] = maze.get(x, y); tile.contents == empty) {
-          maze.set(x, y, {oxygen, 0});
+          maze.set(x, y, {oxygen, time});
           new_oxygens.insert({x, y});
           finished = false;
         }
       }
     }
     oxygens = new_oxygens;
-    ++time;
   }
-  std::cout << "Time " << time << std::endl;
+
+  std::cout << "Part one, distance " << maze.get(0, 0).second.time << "\n"
+            << "Part two, time " << (time - 1) << std::endl;
+
+  // Just for fun, mark the shortest path.
+  x = 0;
+  y = 0;
+  time = maze.get(0, 0).second.time;
+  maze.set(0, 0, {droid, -1});
+  while (time) {
+    // Find an adjacent square one step closer to the pump.
+    for (int direction = 0; direction != 4; ++direction) {
+      int nx = x + vectors[direction][0];
+      int ny = y + vectors[direction][1];
+      auto tile = maze.get(nx, ny).second;
+      if (tile.contents == oxygen && tile.time == time - 1) {
+        x = nx;
+        y = ny;
+        --time;
+        maze.set(x, y, {path, -1});
+        break;
+      }
+    }
+  }
+
+  // Dump map.
+  maze.set(px, py, {pump, -1});
+  maze.put(std::cout, [](bool set, const tile_t &tile) {
+    switch (tile.contents) {
+    case pump: return 'O';
+    case droid: return 'D';
+    case path: return '.';
+    case oxygen: return ' ';
+    default: return '#';
+    }
+  });
 }
 
 int CALLBACK _tWinMain(HINSTANCE, HINSTANCE, LPTSTR, int) {
   try {
     auto programs = read_programs("15.data");
     do_it(programs[0]);
-    // part_two(programs[0], false, false);
     return 0;
   } catch (const char *e) {
     std::cout << e << std::endl;
