@@ -6,7 +6,7 @@
 int paint(
   d2d_stuff_t &d2d_stuff, rectangle_t<int64_t> &surface, int64_t score) {
   std::basic_ostringstream<WCHAR> ostr;
-  ostr << L"Score " << score;
+  ostr << std::setfill(L'0') << std::setw(5) << score;
   int count = 0;
   surface.put2(d2d_stuff, ostr.str(), [&count](bool set, int64_t value) -> int {
     count += value == 2;
@@ -57,7 +57,7 @@ void part_two(program_t program, bool verbose, bool verbose1) {
       }
     }
   }
-  d2d_stuff.render_frames(10);
+  d2d_stuff.render_frames(10, text_style::segment, 5);
 }
 
 int CALLBACK _tWinMain(HINSTANCE, HINSTANCE, LPTSTR, int) {

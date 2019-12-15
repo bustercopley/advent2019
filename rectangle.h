@@ -23,7 +23,10 @@ template <typename T> struct rectangle_t {
   template <typename F>
   void put2(d2d_stuff_t &d2d_stuff, std::basic_string<WCHAR> &&str, F &&f);
 
-private:
+  template <typename F>
+  void put0(F &&f) const;
+
+ private:
   typedef std::map<int, T> row_t;
   std::map<int, row_t> matrix;
   int minx = 0, miny = 0, maxx = 0, maxy = 0;
@@ -93,5 +96,16 @@ inline void rectangle_t<T>::put2(
   }
   d2d_stuff.enqueue(std::move(str), std::move(colors), width, height);
 }
+
+template <typename T>
+template <typename F>
+inline void rectangle_t<T>::put0(F &&f) const {
+  for (int y = maxy; y != miny - 1; --y) {
+    for (int x = minx; x != maxx + 1; ++x) {
+      std::apply(f, x, y, get(x, y).second);
+    }
+  }
+}
+
 
 #endif

@@ -9,42 +9,45 @@ struct BeginDrawGuard {
 
 const text_style text_styles[text_style::count] = {
   // For animated labels (semibold; no grid fit, no snap, vertical antialising).
-  {L"Calibri", 15.0f, DWRITE_FONT_WEIGHT_BOLD, DWRITE_FONT_STYLE_NORMAL,
+  {L"Calibri", 24.0f, DWRITE_FONT_WEIGHT_BOLD, DWRITE_FONT_STYLE_NORMAL,
     DWRITE_FONT_STRETCH_NORMAL, DWRITE_RENDERING_MODE_NATURAL_SYMMETRIC,
     DWRITE_GRID_FIT_MODE_DISABLED, D2D1_DRAW_TEXT_OPTIONS_NO_SNAP},
   // For static labels (normal weight, grid fit, snap, no vertical antialising).
-  {L"Consolas", 12.0f, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL,
-    DWRITE_FONT_STRETCH_NORMAL, DWRITE_RENDERING_MODE_NATURAL,
-    DWRITE_GRID_FIT_MODE_ENABLED, D2D1_DRAW_TEXT_OPTIONS_NONE},
+  {L"DSEG7 Classic Mini", 24.0f, DWRITE_FONT_WEIGHT_NORMAL,
+    DWRITE_FONT_STYLE_ITALIC, DWRITE_FONT_STRETCH_NORMAL,
+    DWRITE_RENDERING_MODE_NATURAL, DWRITE_GRID_FIT_MODE_ENABLED,
+    D2D1_DRAW_TEXT_OPTIONS_NONE},
 };
 
-void d2d_stuff_t::render_frames(std::size_t thread_count) {
+void d2d_stuff_t::render_frames(std::size_t thread_count,
+  text_style::type caption_style, int caption_colour_index) {
   std::vector<std::thread> threads;
   for (std::size_t i = 0; i != thread_count; ++i) {
     std::size_t begin = std::size(work) * i / thread_count;
     std::size_t end = std::size(work) * (i + 1) / thread_count;
-    threads.emplace_back(
-      thread_function, this, max_width, max_height, begin, end);
+    threads.emplace_back(thread_function, this, max_width, max_height, begin,
+      end, caption_style, caption_colour_index);
   }
   for (std::size_t i = 0; i != thread_count; ++i) {
     threads[i].join();
   }
 }
 
-void d2d_stuff_t::thread_function(
-  int width, int height, std::size_t frames_begin, std::size_t frames_end) {
+void d2d_stuff_t::thread_function(int width, int height,
+  std::size_t frames_begin, std::size_t frames_end,
+  text_style::type caption_style, int caption_color_index) {
   d2d_t d2d;
-  d2d_thread_t d2d_thread(d2d, 10 * width, 10 * height + 20);
+  d2d_thread_t d2d_thread(d2d, 10 * width, 10 * height + 30);
   auto RenderTarget = d2d_thread.GetRenderTarget();
   const D2D1::ColorF brush_colors[] = {
-    {1.0f, 1.0f, 1.0f, 1.0f},
+    {0.0f, 0.0f, 0.0f, 1.0f},
     {1.0f, 0.0f, 0.0f, 1.0f},
     {0.0f, 1.0f, 0.0f, 1.0f},
     {0.0f, 0.0f, 1.0f, 1.0f},
     {0.0f, 1.0f, 1.0f, 1.0f},
     {1.0f, 0.0f, 1.0f, 1.0f},
     {1.0f, 1.0f, 0.0f, 1.0f},
-    {0.0f, 0.0f, 0.0f, 1.0f},
+    {0.3f, 0.0f, 0.0f, 1.0f},
   };
   ID2D1SolidColorBrushPtr Brushes[std::size(brush_colors)];
   for (std::size_t i = 0; i != std::size(brush_colors); ++i) {
@@ -55,7 +58,7 @@ void d2d_stuff_t::thread_function(
     const std::vector<int> &pixels = work[index];
     {
       BeginDrawGuard guard(RenderTarget);
-      RenderTarget->Clear({1.0f, 1.0f, 1.0f, 1.0f});
+      RenderTarget->Clear({0.0f, 0.0f, 0.0f, 1.0f});
       for (int y = 0; y != height; ++y) {
         std::size_t base = width * y;
         for (int x = 0; x != width; ++x) {
@@ -66,8 +69,18 @@ void d2d_stuff_t::thread_function(
             &rect, Brushes[pixels[index] % std::size(brush_colors)]);
         }
       }
-      d2d_thread.draw_text(captions[index].c_str(), 1.0f, height * 10.0f + 2.0f,
-        Brushes[7], text_style::legend, text_anchor::topleft);
+      if (caption_style == text_style::segment) {
+        std::basic_string<WCHAR> all_on(std::size(captions[index]), L'8');
+        d2d_thread.draw_text(all_on.c_str(), 1.0f, height * 10.0f + 1.0f,
+          Brushes[7], caption_style, text_anchor::topleft);
+        d2d_thread.draw_text(captions[index].c_str(), 1.0f,
+          height * 10.0f + 1.0f, Brushes[1], caption_style,
+          text_anchor::topleft);
+      } else {
+        d2d_thread.draw_text(captions[index].c_str(), 1.0f,
+          height * 10.0f + 1.0f, Brushes[caption_color_index], caption_style,
+          text_anchor::topleft);
+      }
     }
 
     std::basic_ostringstream<WCHAR> ostr;

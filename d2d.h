@@ -38,7 +38,7 @@ COM_SMARTPTR_TYPEDEF(IDWriteRenderingParams2);
 enum class text_anchor { topleft, centre };
 
 struct text_style {
-  enum type { label, legend, count };
+  enum type { normal, segment, count };
   const wchar_t *fontFamilyName;
   float fontSize;
   DWRITE_FONT_WEIGHT fontWeight;
