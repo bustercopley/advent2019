@@ -24,7 +24,7 @@ all: $(FILENAMES)
 test: $(FILENAME)
 	$(FILENAME) $(ARGS)
 debug: $(OBJDIR)/$(FILENAME)
-	gdb --quiet --batch -ex run -ex "bt full" -ex quit --args $(OBJDIR)/$(FILENAME) $(ARGS)
+	gdb --quiet --batch -ex run -ex "bt" -ex quit --args $(OBJDIR)/$(FILENAME) $(ARGS)
 clean:
 	-rd /s /q $(OBJDIR)
 	-del $(FILENAMES)
