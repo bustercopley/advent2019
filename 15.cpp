@@ -20,9 +20,9 @@ void paint(d2d_stuff_t &d2d_stuff, rectangle_t<tile_t> &maze,
   maze.put2(d2d_stuff, ostr.str(), [unknown_is_wall](bool is_set, tile_t tile) -> int {
     switch (is_set ? tile.contents : unknown) {
     case unknown:
-      return unknown_is_wall ? 1 : 8;
+      [[fallthrough]];
     case wall:
-      return 1;
+      return 10;
     case oxygen:
       return 3;
     case droid:
@@ -30,9 +30,9 @@ void paint(d2d_stuff_t &d2d_stuff, rectangle_t<tile_t> &maze,
     case pump:
       return 4;
     case path:
-      return 8;
+      return 9;
     default:
-      return 0;
+      return 9;
     }
   });
 }

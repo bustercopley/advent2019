@@ -40,15 +40,17 @@ void d2d_stuff_t::thread_function(int width, int height,
   d2d_thread_t d2d_thread(d2d, 10 * width, 10 * height + 30);
   auto RenderTarget = d2d_thread.GetRenderTarget();
   const D2D1::ColorF brush_colors[] = {
-    {0.0f, 0.0f, 0.0f, 1.0f}, // 0: black
-    {1.0f, 0.0f, 0.0f, 1.0f}, // 1: red
-    {0.0f, 1.0f, 0.0f, 1.0f}, // 2: green
-    {0.0f, 0.0f, 1.0f, 1.0f}, // 3: blue
-    {0.0f, 1.0f, 1.0f, 1.0f}, // 4: cyan
-    {1.0f, 0.0f, 1.0f, 1.0f}, // 5: magenta
-    {1.0f, 1.0f, 0.0f, 1.0f}, // 6: yellow
-    {1.0f, 1.0f, 1.0f, 1.0f}, // 7: white
-    {0.2f, 0.0f, 0.0f, 1.0f}, // 8: dark red
+    {0.0f, 0.0f, 0.0f, 1.0f},       // 0: black
+    {1.0f, 0.0f, 0.0f, 1.0f},       // 1: red
+    {0.0f, 1.0f, 0.0f, 1.0f},       // 2: green
+    {0.298f, 0.463f, 1.000f, 1.0f}, // 3: blue
+    {0.0f, 1.0f, 1.0f, 1.0f},       // 4: cyan
+    {1.0f, 0.0f, 1.0f, 1.0f},       // 5: magenta
+    {1.0f, 1.0f, 0.0f, 1.0f},       // 6: yellow
+    {1.0f, 1.0f, 1.0f, 1.0f},       // 7: white
+    {0.2f, 0.0f, 0.0f, 1.0f},       // 8: dark red
+    {0.600f, 0.420f, 0.216f, 1.0f}, // 9: light brown
+    {0.220f, 0.161f, 0.039f, 1.0f}, // 10: dark brown
   };
   ID2D1SolidColorBrushPtr Brushes[std::size(brush_colors)];
   for (std::size_t i = 0; i != std::size(brush_colors); ++i) {
