@@ -80,6 +80,9 @@ int64_t run_until_output(program_t &program, int64_t &pc, int64_t &base,
   return run_until_output(
     program, pc, base,
     [&inputs]() {
+      if (std::empty(inputs)) {
+        throw "NO INPUT";
+      }
       int64_t result = inputs[0];
       inputs.erase(inputs.begin(), inputs.begin() + 1);
       return result;
@@ -200,7 +203,7 @@ int64_t run_until_output(program_t &program, int64_t &pc, int64_t &base,
       break;
     }
 
-    case 9: { // EQUALS
+    case 9: { // ADJUST RELATIVE BASE
       auto p = get_params<1>(program, opcode, pc, base, 2, verbose);
       if (verbose) {
         std::cout << "base = base + " << p[0] << " = " << (base + p[0])
