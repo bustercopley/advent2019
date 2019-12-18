@@ -1,7 +1,7 @@
-#include "precompiled.h"
-#include "intcode.h"
-#include "rectangle.h"
+#include <map>
 #include <set>
+#include <string>
+#include <vector>
 
 using field_t = std::vector<std::string>;
 
@@ -159,11 +159,6 @@ void part_two(field_t field) {
   for (int i = 0; i != key_count; ++i) {
     std::map<std::string, int> new_optimal;
     for (auto [keys_string, current_distance] : optimal) {
-      if (std::size(keys_string) != (std::size_t)(i + 4)) {
-        std::cout << "Bad keys_string " << keys_string << ", round " << i << std::endl;
-        throw "LENGTH ERROR";
-      }
-
       auto keys_taken_list = keys_string;
       keys_taken_list.erase(
         std::begin(keys_taken_list) + i, std::end(keys_taken_list));
@@ -214,30 +209,33 @@ std::istream &read(std::istream &stream, field_t &field) {
 }
 
 field_t read_file(const char *filename) {
-  std::cout << "Reading \"" << filename << "\"" << std::endl;
   std::ifstream stream(filename);
   field_t field;
   read(stream, field);
   return field;
 }
 
-int CALLBACK _tWinMain(HINSTANCE, HINSTANCE, LPTSTR, int) {
-  try {
-    for (auto filename : {"18-test.data", "18.data"}) {
-      std::cout << "Processing " << filename << std::endl;
-      auto field = read_file(filename);
-      std::cout << "Part one" << std::endl;
-      part_one(field);
-    }
-    for (auto filename : {"18-test-2.data", "18.data"}) {
-      std::cout << "Processing " << filename << std::endl;
-      auto field = read_file(filename);
-      std::cout << "Part two" << std::endl;
-      part_two(field);
-    }
-  } catch (const char *e) {
-    std::cout << e << std::endl;
-    return 1;
+void do_it() {
+  for (auto filename : {"18-test.data", "18.data"}) {
+    std::cout << "Processing " << filename << std::endl;
+    auto field = read_file(filename);
+    std::cout << "Part one" << std::endl;
+    part_one(field);
   }
+  for (auto filename : {"18-test-2.data", "18.data"}) {
+    std::cout << "Processing " << filename << std::endl;
+    auto field = read_file(filename);
+    std::cout << "Part two" << std::endl;
+    part_two(field);
+  }
+}
+
+int main() {
+  do_it();
+  return 0;
+}
+
+int wmain() {
+  do_it();
   return 0;
 }
