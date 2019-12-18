@@ -90,7 +90,7 @@ void part_one(field_t field) {
   std::map<std::string, int> optimal = {{"@", 0}};
   for (int i = 0; i != key_count; ++i) {
     std::map<std::string, int> new_optimal;
-    for (auto [keys_string, current_distance] : optimal) {
+    for (const auto &[keys_string, current_distance] : optimal) {
       char last_key = keys_string.back();
       auto keys_taken_list = keys_string;
       keys_taken_list.pop_back();
@@ -108,10 +108,10 @@ void part_one(field_t field) {
         }
       }
     }
-    optimal = new_optimal;
+    std::swap(optimal, new_optimal);
   }
   int best = 1 << 30;
-  for (auto [keys_taken_list, distance] : optimal) {
+  for (auto [keys_string, distance] : optimal) {
     if (best > distance) {
       best = distance;
     }
@@ -158,7 +158,7 @@ void part_two(field_t field) {
   std::map<std::string, int> optimal = {{"@@@@", 0}};
   for (int i = 0; i != key_count; ++i) {
     std::map<std::string, int> new_optimal;
-    for (auto [keys_string, current_distance] : optimal) {
+    for (const auto& [keys_string, current_distance] : optimal) {
       auto keys_taken_list = keys_string;
       keys_taken_list.erase(
         std::begin(keys_taken_list) + i, std::end(keys_taken_list));
@@ -187,10 +187,10 @@ void part_two(field_t field) {
         }
       }
     }
-    optimal = new_optimal;
+    std::swap(optimal, new_optimal);
   }
   int best = 1 << 30;
-  for (auto [keys_taken_list, distance] : optimal) {
+  for (auto [keys_string, distance] : optimal) {
     if (best > distance) {
       best = distance;
     }
