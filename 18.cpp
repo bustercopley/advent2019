@@ -97,7 +97,7 @@ void part_one(field_t field) {
       auto keys_taken = string_to_set(keys_taken_list);
       auto [x, y] = objects[last_key];
       auto keys = get_accessible_keys(field, keys_taken, x, y);
-      for (auto [key, distance]: keys) {
+      for (auto [key, distance] : keys) {
         auto keys = keys_taken;
         keys.insert(key);
         auto keys_list = set_to_string(keys);
@@ -120,9 +120,85 @@ void part_one(field_t field) {
 }
 
 void part_two(field_t field) {
-  (void)field;
-  int64_t result = 0;
-  std::cout << result << std::endl;
+  auto objects = get_objects(field);
+  std::string all_keys_list;
+  {
+    std::set<char> all_keys;
+    for (const auto &pair : objects) {
+      if ('a' <= pair.first && pair.first <= 'z') {
+        all_keys.insert(pair.first);
+      }
+    }
+    all_keys_list = set_to_string(all_keys);
+  }
+  int key_count = std::size(all_keys_list);
+
+  auto [x, y] = objects['@'];
+
+  field[y - 1][x - 1] = '.';
+  field[y - 1][x] = '#';
+  field[y - 1][x + 1] = '.';
+
+  field[y][x - 1] = '#';
+  field[y][x] = '#';
+  field[y][x + 1] = '#';
+
+  field[y + 1][x - 1] = '.';
+  field[y + 1][x] = '#';
+  field[y + 1][x + 1] = '.';
+
+  std::array<int, 2> robots[4] = {
+    {x - 1, y - 1},
+    {x + 1, y - 1},
+    {x - 1, y + 1},
+    {x + 1, y + 1},
+  };
+
+  // {[keys_already_taken][current_keys], current_distance}
+  std::map<std::string, int> optimal = {{"@@@@", 0}};
+  for (int i = 0; i != key_count; ++i) {
+    std::map<std::string, int> new_optimal;
+    for (auto [keys_string, current_distance] : optimal) {
+      if (std::size(keys_string) != (std::size_t)(i + 4)) {
+        throw "LENGTH ERROR";
+      }
+      std::string robots_list(
+        std::begin(keys_string) + i, std::end(keys_string));
+      auto keys_taken_list = keys_string;
+      keys_taken_list.erase(
+        std::begin(keys_taken_list) + i, std::end(keys_taken_list));
+
+      for (int j = 0; j != 4; ++j) {
+        char last_key = robots_list[j];
+        auto keys_taken = string_to_set(keys_taken_list);
+        auto [x, y] = objects[last_key];
+        if (last_key == '@') {
+          x = robots[j][0];
+          y = robots[j][1];
+        }
+        auto keys = get_accessible_keys(field, keys_taken, x, y);
+        for (auto [key, distance] : keys) {
+          auto keys = keys_taken;
+          keys.insert(key);
+          robots_list[j] = key;
+          auto keys_list = set_to_string(keys);
+          keys_list.append(robots_list);
+          auto &d = new_optimal[keys_list];
+          if (!d || d > distance + current_distance) {
+            d = distance + current_distance;
+          }
+        }
+      }
+      optimal = new_optimal;
+    }
+  }
+  int best = 1 << 30;
+  for (auto [keys_taken_list, distance] : optimal) {
+    if (best > distance) {
+      best = distance;
+    }
+  }
+  std::cout << "Answer " << best << std::endl;
 }
 
 std::istream &read(std::istream &stream, field_t &field) {
@@ -144,13 +220,18 @@ field_t read_file(const char *filename) {
 }
 
 int CALLBACK _tWinMain(HINSTANCE, HINSTANCE, LPTSTR, int) {
-  for (auto filename : {"18-test.data", "18.data"}) {
-    std::cout << "Processing " << filename << std::endl;
-    auto field = read_file(filename);
-    std::cout << "Part one" << std::endl;
-    part_one(field);
-    std::cout << "Part two" << std::endl;
-    part_two(field);
+  try {
+    for (auto filename : {"18-test-2.data", "18.data" }) {
+      std::cout << "Processing " << filename << std::endl;
+      auto field = read_file(filename);
+      // std::cout << "Part one" << std::endl;
+      // part_one(field);
+      std::cout << "Part two" << std::endl;
+      part_two(field);
+    }
+  } catch (const char *e) {
+    std::cout << e << std::endl;
+    return 1;
   }
   return 0;
 }
