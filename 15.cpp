@@ -6,7 +6,7 @@
 int64_t directions[] = {4, 1, 3, 2}; // E, N, W, S
 int vectors[][2] = {{1, 0}, {0, 1}, {-1, 0}, {0, -1}};
 
-enum contents_t { unknown, wall, empty, oxygen, droid, pump, path };
+enum contents_t { unknown, wall, home, empty, oxygen, droid, pump, path };
 
 struct tile_t {
   contents_t contents;
@@ -17,24 +17,27 @@ void paint(d2d_stuff_t &d2d_stuff, rectangle_t<tile_t> &maze,
   bool unknown_is_wall, int time) {
   std::basic_ostringstream<WCHAR> ostr;
   ostr << time;
-  maze.put2(d2d_stuff, ostr.str(), [unknown_is_wall](bool is_set, tile_t tile) -> int {
-    switch (is_set ? tile.contents : unknown) {
-    case unknown:
-      [[fallthrough]];
-    case wall:
-      return 10;
-    case oxygen:
-      return 3;
-    case droid:
-      return 6;
-    case pump:
-      return 4;
-    case path:
-      return 9;
-    default:
-      return 9;
-    }
-  });
+  maze.put2(
+    d2d_stuff, ostr.str(), [unknown_is_wall](bool is_set, tile_t tile) -> int {
+      switch (is_set ? tile.contents : unknown) {
+      case unknown:
+        [[fallthrough]];
+      case wall:
+        return 10;
+      case home:
+        return 2;
+      case oxygen:
+        return 3;
+      case droid:
+        return 6;
+      case pump:
+        return 4;
+      case path:
+        return 9;
+      default:
+        return 9;
+      }
+    });
 }
 
 void do_it(program_t program) {
@@ -54,7 +57,7 @@ void do_it(program_t program) {
   // Explore the maze for an arbitrary number of turns.
   // Keep the droid's right hand on a wall.
 
-  for (int n = 0; n != 3190; ++n) {
+  while (true) {
     if (auto [is_set, tile] =
           maze.get(x + vectors[direction][0], y + vectors[direction][1]);
         tile.contents == wall) {
@@ -65,15 +68,7 @@ void do_it(program_t program) {
 
     // Try to go forward.
     output = run_until_output(
-      program, pc, base,
-      [&]() {
-        tile_t tile = maze.get(x, y).second;
-        maze.set(x, y, {droid, 0});
-        paint(d2d_stuff, maze, false, pump_time ? pump_time : time);
-        maze.set(x, y, tile);
-        return directions[direction];
-      },
-      false);
+      program, pc, base, [&]() { return directions[direction]; }, false);
 
     x += vectors[direction][0];
     y += vectors[direction][1];
@@ -87,7 +82,18 @@ void do_it(program_t program) {
       continue;
     }
 
-    // We went forward. Update map and turn right.
+    // We went forward. Emit a frame.
+    tile_t tile = maze.get(x, y).second;
+    maze.set(0, 0, {home, 0});
+    maze.set(x, y, {droid, 0});
+    paint(d2d_stuff, maze, false, pump_time ? pump_time : time);
+    maze.set(x, y, tile);
+
+    // Quit after we return to the origin.
+    if (x == 0 && y == 0) {
+      break;
+    }
+
     // Update map.
     ++time;
     if (tile_t tile = maze.get(x, y).second; tile.contents == unknown) {
@@ -122,8 +128,9 @@ void do_it(program_t program) {
       for (int direction = 0; direction != 4; ++direction) {
         int x = tile[0] + vectors[direction][0];
         int y = tile[1] + vectors[direction][1];
-        if (auto [is_set, tile] = maze.get(x, y); tile.contents == empty) {
-          maze.set(x, y, {oxygen, time});
+        if (auto [is_set, tile] = maze.get(x, y);
+            tile.contents == empty || tile.contents == home) {
+          maze.set(x, y, {tile.contents == home ? home : oxygen, time});
           new_oxygens.insert({x, y});
           finished = false;
         }
@@ -156,6 +163,7 @@ void do_it(program_t program) {
       direction = (direction + 1) & 3;
       continue;
     }
+    maze.set(0, 0, {home, -1});
     maze.set(x, y, {droid, -1});
     maze.set(px, py, {pump, 0});
     paint(d2d_stuff, maze, true, oxygenation_time);
