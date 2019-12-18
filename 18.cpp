@@ -160,17 +160,19 @@ void part_two(field_t field) {
     std::map<std::string, int> new_optimal;
     for (auto [keys_string, current_distance] : optimal) {
       if (std::size(keys_string) != (std::size_t)(i + 4)) {
+        std::cout << "Bad keys_string " << keys_string << ", round " << i << std::endl;
         throw "LENGTH ERROR";
       }
-      std::string robots_list(
-        std::begin(keys_string) + i, std::end(keys_string));
+
       auto keys_taken_list = keys_string;
       keys_taken_list.erase(
         std::begin(keys_taken_list) + i, std::end(keys_taken_list));
+      auto keys_taken = string_to_set(keys_taken_list);
 
       for (int j = 0; j != 4; ++j) {
+        std::string robots_list(
+          std::begin(keys_string) + i, std::end(keys_string));
         char last_key = robots_list[j];
-        auto keys_taken = string_to_set(keys_taken_list);
         auto [x, y] = objects[last_key];
         if (last_key == '@') {
           x = robots[j][0];
@@ -189,8 +191,8 @@ void part_two(field_t field) {
           }
         }
       }
-      optimal = new_optimal;
     }
+    optimal = new_optimal;
   }
   int best = 1 << 30;
   for (auto [keys_taken_list, distance] : optimal) {
@@ -221,7 +223,7 @@ field_t read_file(const char *filename) {
 
 int CALLBACK _tWinMain(HINSTANCE, HINSTANCE, LPTSTR, int) {
   try {
-    for (auto filename : {"18-test-2.data", "18.data" }) {
+    for (auto filename : {"18-test-2.data", "18.data"}) {
       std::cout << "Processing " << filename << std::endl;
       auto field = read_file(filename);
       // std::cout << "Part one" << std::endl;
