@@ -223,11 +223,15 @@ field_t read_file(const char *filename) {
 
 int CALLBACK _tWinMain(HINSTANCE, HINSTANCE, LPTSTR, int) {
   try {
+    for (auto filename : {"18-test.data", "18.data"}) {
+      std::cout << "Processing " << filename << std::endl;
+      auto field = read_file(filename);
+      std::cout << "Part one" << std::endl;
+      part_one(field);
+    }
     for (auto filename : {"18-test-2.data", "18.data"}) {
       std::cout << "Processing " << filename << std::endl;
       auto field = read_file(filename);
-      // std::cout << "Part one" << std::endl;
-      // part_one(field);
       std::cout << "Part two" << std::endl;
       part_two(field);
     }
