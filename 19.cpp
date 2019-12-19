@@ -34,7 +34,7 @@ std::array<int, 2> get_onoff(program_t program, int y) {
   throw "ERROR";
 }
 
-// 1833 1989!
+// 1826 1982
 void paint(const program_t &program, int l0, int l1, int r0, int y0) {
   rectangle_t<char> r;
   int x0 = l0 - 10;
@@ -67,7 +67,7 @@ void part_two(const program_t &program) {
   int y0 = (100 + a) / 0.094;
   for (int y = y0 - 200; y != y0 + 100; ++y) {
     auto [l0, r0] = get_onoff(program, y);
-    auto [l1, r1] = get_onoff(program, y + 100);
+    auto [l1, r1] = get_onoff(program, y + 99);
     if (r0 - l1 == 100) {
       paint(program, l0, l1, r0, y);
       break;
