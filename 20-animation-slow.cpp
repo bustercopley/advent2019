@@ -13,8 +13,8 @@
 #include <vector>
 
 static constexpr int limit = 44;
-static constexpr int scale = 2;
-static constexpr int gap = 2;
+static constexpr int scale = 1;
+static constexpr int gap = 1;
 static constexpr float scalef = (float)scale;
 static constexpr int row_size = 9;
 
@@ -23,8 +23,12 @@ using line_t = std::vector<tile_t>;
 using field_t = std::vector<line_t>;
 using point_t = std::array<int, 2>;
 using portals_t = std::map<point_t, point_t>;
-using data_t = std::tuple<field_t, portals_t, point_t, point_t>;
-using access_t = std::set<point_t>;
+using data_t = std::tuple<field_t, portals_t, std::array<point_t, 3>,
+  std::array<point_t, 3>>;
+using access_t = std::vector<point_t>;
+using level_point_t = std::pair<int, point_t>;
+using level_access_t = std::vector<level_point_t>;
+
 bool isalpha(char c) { return 'A' <= c && c <= 'Z'; }
 
 std::istream &read_field(std::istream &stream, field_t &field) {
@@ -75,7 +79,7 @@ const D2D1::ColorF brush_colors[] = {
   {1.0f, 1.0f, 1.0f, 1.0f},       // 7: white
   {0.2f, 0.0f, 0.0f, 1.0f},       // 8: dark red
   {0.600f, 0.420f, 0.216f, 1.0f}, // 9: light brown
-  {0.120f, 0.1f, 0.03f, 1.0f}, // 10: dark brown
+  {0.220f, 0.15f, 0.08f, 1.0f},   // 10: dark brown
 };
 
 int tile_contents_to_color_index(char c) {
@@ -94,6 +98,10 @@ int tile_contents_to_color_index(char c) {
     return 7;
   case '-':
     return 0;
+  case '>':
+    return 5;
+  case '<':
+    return 5;
   default:
     return 2;
   }
@@ -129,9 +137,9 @@ data_t read_data(const char *filename) {
           const auto &[name, points] = mouth;
           const auto &[in, out] = points;
           if (name == "AA") {
-            begin = out;
+            begin = {out, in, point_t{2 * in[0] - out[0], 2 * in[1] - out[1]}};
           } else if (name == "ZZ") {
-            end = out;
+            end = {out, in, point_t{2 * in[0] - out[0], 2 * in[1] - out[1]}};
           } else if (auto iter = mouths.find(name); iter != mouths.end()) {
             portals[in] = iter->second.second;
             portals[iter->second.first] = out;
@@ -142,9 +150,6 @@ data_t read_data(const char *filename) {
       }
     }
   }
-  for (auto [name, points] : mouths) {
-    std::cout << name << std::endl;
-  }
   return data;
 }
 
@@ -153,13 +158,11 @@ std::ostream &operator<<(std::ostream &stream, const point_t &point) {
   return stream << "(" << x << "," << y << ")";
 }
 
-using level_access_t = std::set<std::pair<int, point_t>>;
-
 void part_two(const data_t &data) {
 
-  const auto &[field, portals, begin, end] = data;
+  const auto &[field, portals, begins, ends] = data;
   std::vector<field_t> levels = {field};
-  levels[0][begin[0]][begin[1]] = {'@', 0};
+  levels[0][begins[0][0]][begins[0][1]] = {'@', 0};
   int distance = 1;
   int level = 0;
 
@@ -177,41 +180,81 @@ void part_two(const data_t &data) {
   }
 
   int frame_index = 0;
-  auto render_frame = [&](const std::basic_string<WCHAR> &caption) {
+  auto render_level = [&]() {
+    BeginDrawGuard guard(RenderTarget);
     int level_count = (int)std::size(levels);
-    {
-      BeginDrawGuard guard(RenderTarget);
-      RenderTarget->Clear({0.0f, 0.0f, 0.0f, 1.0f});
-      for (int k = 0; k != level_count; ++k) {
-        for (int i = 0; i != h; ++i) {
-          for (int j = 0; j != w; ++j) {
-            int color_index =
-              tile_contents_to_color_index(levels[k][i][j].first);
-            float x = ((k % row_size) * (w + gap) + j) * scalef;
-            float y = ((k / row_size) * (h + gap) + i) * scalef;
-            D2D1_RECT_F rect = {x, y, x + scalef, y + scalef};
-            RenderTarget->FillRectangle(&rect, Brushes[color_index]);
-          }
-        }
+    int k = level_count - 1;
+    for (int i = 0; i != h; ++i) {
+      for (int j = 0; j != w; ++j) {
+        int color_index = tile_contents_to_color_index(levels[k][i][j].first);
+        float x = ((k % row_size) * (w + gap) + j) * scalef;
+        float y = ((k / row_size) * (h + gap) + i) * scalef;
+        D2D1_RECT_F rect = {x, y, x + scalef, y + scalef};
+        RenderTarget->FillRectangle(&rect, Brushes[color_index]);
       }
+    }
+  };
+
+  auto render_access = [&](
+                         const level_access_t &level_access, int color_index) {
+    BeginDrawGuard guard(RenderTarget);
+    for (const auto &level_point : level_access) {
+      const auto &[k, p] = level_point;
+      auto [i, j] = p;
+      float x = ((k % row_size) * (w + gap) + j) * scalef;
+      float y = ((k / row_size) * (h + gap) + i) * scalef;
+      D2D1_RECT_F rect = {x, y, x + scalef, y + scalef};
+      RenderTarget->FillRectangle(&rect, Brushes[color_index]);
+    }
+  };
+
+  auto render_point = [&](const level_point_t &level_point, int color_index) {
+    BeginDrawGuard guard(RenderTarget);
+    const auto &[k, p] = level_point;
+    auto [i, j] = p;
+    float x = ((k % row_size) * (w + gap) + j) * scalef;
+    float y = ((k / row_size) * (h + gap) + i) * scalef;
+    D2D1_RECT_F rect = {x, y, x + scalef, y + scalef};
+    RenderTarget->FillRectangle(&rect, Brushes[color_index]);
+  };
+
+  {
+    BeginDrawGuard guard(RenderTarget);
+    RenderTarget->Clear({0.0f, 0.0f, 0.0f, 1.0f});
+  }
+
+  auto render_frame = [&](int distance) {
+    {
+      std::basic_ostringstream<WCHAR> ostr;
+      ostr << distance;
+      const auto &caption = ostr.str();
       std::basic_string<WCHAR> all_on(std::size(caption), L'8');
+      D2D1_RECT_F rect = {0, height - 30, 120, height};
+      BeginDrawGuard guard(RenderTarget);
+      RenderTarget->FillRectangle(&rect, Brushes[0]);
       d2d_thread.draw_text(all_on.c_str(), 1.0f, height - 29.0f, Brushes[8],
         text_style::segment, text_anchor::topleft);
       d2d_thread.draw_text(caption.c_str(), 1.0f, height - 29.0f, Brushes[1],
         text_style::segment, text_anchor::topleft);
     }
     std::basic_ostringstream<WCHAR> ostr;
-    ostr << L".obj/frame-" << std::setfill(L'0') << std::setw(4)
+    ostr << L".obj/frame-" << std::setfill(L'0') << std::setw(5)
          << frame_index++ << L".png";
     auto filename = ostr.str();
     d2d_thread.write_png(filename.c_str());
+    if ((frame_index & 255) == 0) {
+      std::cout << "Frame " << frame_index << std::endl;
+    }
   };
 
-  for (level_access_t access = {{0, begin}}; !std::empty(access); ++distance) {
-    std::basic_ostringstream<WCHAR> ostr;
-    ostr << distance;
-    render_frame(ostr.str());
-
+  levels[0][begins[1][0]][begins[1][1]].first = '>';
+  levels[0][begins[2][0]][begins[2][1]].first = '>';
+  levels[0][ends[1][0]][ends[1][1]].first = '<';
+  levels[0][ends[2][0]][ends[2][1]].first = '<';
+  render_level();
+  render_frame(distance);
+  for (level_access_t access = {{0, begins[0]}}; !std::empty(access);
+       ++distance) {
     level_access_t new_access;
     for (const auto [l, p] : access) {
       point_t next[4] = {
@@ -222,7 +265,7 @@ void part_two(const data_t &data) {
       };
       for (auto p : next) {
         level = l;
-        if (level == 0 && p == end) {
+        if (level == 0 && p == ends[0]) {
           levels[level][p[0]][p[1]].second = distance;
           goto done;
         }
@@ -240,16 +283,20 @@ void part_two(const data_t &data) {
             ++level;
             if (level == (int)std::size(levels)) {
               levels.push_back(field);
+              render_level();
             }
           }
           p = iter->second;
         }
         if (levels[level][p[0]][p[1]].first == '.') {
           levels[level][p[0]][p[1]] = {'@', distance};
-          new_access.insert({level, p});
+          new_access.push_back({level, p});
         }
       }
     }
+    render_access(new_access, 4);
+    render_frame(distance);
+    render_access(new_access, 3);
     std::swap(access, new_access);
   }
 
@@ -260,19 +307,18 @@ done:
   // Just for fun, mark the shortest path.
   {
     std::cout << "Distance " << distance << std::endl;
-    int l = 0;
-    auto pos = end;
+    auto pos = ends[0];
     if (levels[level][pos[0]][pos[1]].second != distance) {
       throw "BAD START";
     }
-    levels[level][pos[0]][pos[1]].first = '+';
-    std::basic_ostringstream<WCHAR> ostr;
-    ostr << distance;
-    render_frame(ostr.str());
-    levels[level][pos[0]][pos[1]].first = '-';
     while (distance--) {
-      std::cout << "Distance " << distance << ", level " << l << ", " << pos
-                << std::endl;
+      render_point(level_point_t{level, pos}, 7);
+      render_frame(distance);
+      render_point(level_point_t{level, pos}, 0);
+      if ((distance & 255) == 0) {
+        std::cout << "Distance " << distance << ", level " << level << ", "
+                  << pos << std::endl;
+      }
       // Find an adjacent square one step closer to the pump.
       point_t adjacents[4] = {
         {pos[0] - 1, pos[1]},
@@ -280,46 +326,46 @@ done:
         {pos[0], pos[1] - 1},
         {pos[0], pos[1] + 1},
       };
-      bool done_flag = false;
+      bool jump = false;
       for (auto p : adjacents) {
-        level = l;
+        auto l = level;
         if (auto iter = portals.find(p); iter != portals.end()) {
-          std::cout << "Portal from level " << level << ", " << p;
           if (p[1] < 2 || p[1] >= (int)std::size(field[p[0]]) - 2 || p[0] < 2 ||
               p[0] >= (int)std::size(field) - 2) {
-            if (level == 0) {
+            if (l == 0) {
               continue;
             }
-            --level;
+            --l;
           } else {
-            if (level == limit) {
+            if (l == limit) {
               continue;
             }
-            ++level;
-            if (level == (int)std::size(levels)) {
+            ++l;
+            if (l == (int)std::size(levels)) {
               throw "SMASH";
             }
           }
+          pos = p;
           p = iter->second;
-          std::cout << " to level " << level << ", " << p << std::endl;
+          jump = true;
         }
-        if (levels[level][p[0]][p[1]].second == distance) {
-          levels[level][p[0]][p[1]].first = '+';
-          std::basic_ostringstream<WCHAR> ostr;
-          ostr << distance;
-          render_frame(ostr.str());
-          levels[level][p[0]][p[1]].first = '-';
-          l = level;
+        if (levels[l][p[0]][p[1]].second == distance) {
+          if (jump) {
+            std::cout << "Portal from level " << level << ", " << pos
+                      << " to level " << l << ", " << p << std::endl;
+          }
+          level = l;
           pos = p;
           done_flag = true;
           break;
         }
       }
-      if (!done_flag) {
-        throw "STUCK";
-      }
     }
   }
+  render_point(level_point_t{level, pos}, 7);
+  render_frame(distance);
+
+  std::cout << "Frame count " << frame_index << std::endl;
 }
 
 void do_it() try {
