@@ -51,18 +51,6 @@ std::istream &read_field(std::istream &stream, field_t &field) {
   return stream;
 }
 
-const text_style text_styles[text_style::count] = {
-  // For animated labels (semibold; no grid fit, no snap, vertical antialising).
-  {L"Calibri", 24.0f, DWRITE_FONT_WEIGHT_BOLD, DWRITE_FONT_STYLE_NORMAL,
-    DWRITE_FONT_STRETCH_NORMAL, DWRITE_RENDERING_MODE_NATURAL_SYMMETRIC,
-    DWRITE_GRID_FIT_MODE_DISABLED, D2D1_DRAW_TEXT_OPTIONS_NO_SNAP},
-  // For static labels (normal weight, grid fit, snap, no vertical antialising).
-  {L"DSEG7 Classic Mini", 24.0f, DWRITE_FONT_WEIGHT_NORMAL,
-    DWRITE_FONT_STYLE_ITALIC, DWRITE_FONT_STRETCH_NORMAL,
-    DWRITE_RENDERING_MODE_NATURAL, DWRITE_GRID_FIT_MODE_ENABLED,
-    D2D1_DRAW_TEXT_OPTIONS_NONE},
-};
-
 struct BeginDrawGuard {
   BeginDrawGuard(ID2D1RenderTarget *r) : r(r) { r->BeginDraw(); }
   ~BeginDrawGuard() noexcept(false) { CHECK_HRESULT(r->EndDraw()); }
@@ -239,7 +227,7 @@ void part_two(const data_t &data) {
         text_style::segment, text_anchor::topleft);
     }
     std::basic_ostringstream<WCHAR> ostr;
-    ostr << L".obj/frame-" << std::setfill(L'0') << std::setw(5)
+    ostr << L".obj/frame-" << std::setfill(L'0') << std::setw(4)
          << frame_index++ << L".png";
     auto filename = ostr.str();
     d2d_thread.write_png(filename.c_str());
@@ -253,6 +241,12 @@ void part_two(const data_t &data) {
   levels[0][ends[1][0]][ends[1][1]].first = '<';
   levels[0][ends[2][0]][ends[2][1]].first = '<';
   render_level();
+
+  for (int i = 0; i != 44; ++i) {
+    levels.push_back(field);
+    render_level();
+  }
+
   render_frame(distance);
   for (level_access_t access = {{0, begins[0]}}; !std::empty(access);
        ++distance) {
