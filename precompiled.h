@@ -10,12 +10,19 @@
 #include <tchar.h>
 #include <shellapi.h>
 
+#include <comdef.h>
+#include <d2d1_1.h>
+#include <dwrite_2.h>
+#include <wincodec.h>
+
 #include <cstdio>
 #include <cstdint>
 #include <cstring>
 
 #include <array>
 #include <vector>
+#include <map>
+#include <set>
 #include <iterator>
 
 #include <istream>
@@ -27,5 +34,6 @@
 
 #include <charconv>
 #include <regex>
+#include <numeric>
 
 #endif
