@@ -12,6 +12,7 @@
 #include <thread>
 #include <vector>
 
+static constexpr int frameskip = 5;
 static constexpr int limit = 44;
 static constexpr int scale = 1;
 static constexpr int gap = 1;
@@ -294,8 +295,10 @@ void part_two(const data_t &data) {
         }
       }
     }
-    render_access(new_access, 4);
-    render_frame(distance);
+    if ((distance % frameskip) == 0) {
+      render_access(new_access, 4);
+      render_frame(distance);
+    }
     render_access(new_access, 3);
     std::swap(access, new_access);
   }
@@ -311,9 +314,12 @@ done:
     if (levels[level][pos[0]][pos[1]].second != distance) {
       throw "BAD START";
     }
-    while (distance--) {
-      render_point(level_point_t{level, pos}, 7);
-      render_frame(distance);
+    while (distance) {
+      if ((distance % frameskip) == 0) {
+        render_point(level_point_t{level, pos}, 7);
+        render_frame(distance);
+      }
+      --distance;
       render_point(level_point_t{level, pos}, 0);
       if ((distance & 255) == 0) {
         std::cout << "Distance " << distance << ", level " << level << ", "
@@ -356,14 +362,13 @@ done:
           }
           level = l;
           pos = p;
-          done_flag = true;
           break;
         }
       }
     }
   }
-  render_point(level_point_t{level, pos}, 7);
-  render_frame(distance);
+  render_point(level_point_t{level, begins[0]}, 7);
+  render_frame(0);
 
   std::cout << "Frame count " << frame_index << std::endl;
 }
