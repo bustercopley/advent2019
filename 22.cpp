@@ -1,10 +1,60 @@
-#include <tuple>
-#include <vector>
+// -*- coding: utf-8; compile-command: "g++ -std=c++17 22.cpp" -*-
+
+#include <charconv>
+#include <fstream>
+#include <iostream>
 #include <istream>
 #include <ostream>
-#include <iostream>
-#include <fstream>
-#include "egcd.h"
+#include <regex>
+#include <tuple>
+#include <vector>
+
+// Extended Euclidean Algorithm and Modular Inverse, from
+// <https://github.com/PetarV-/Algorithms/blob/master/
+//   Mathematical Algorithms/Extended Euclidean Algorithm.cpp>
+inline int64_t modinv(int64_t a, int64_t b) {
+  // The MIT License (MIT)
+
+  // Copyright (c) 2015 Petar Veličković
+
+  // Permission is hereby granted, free of charge, to any person obtaining a
+  // copy of this software and associated documentation files (the "Software"),
+  // to deal in the Software without restriction, including without limitation
+  // the rights to use, copy, modify, merge, publish, distribute, sublicense,
+  // and/or sell copies of the Software, and to permit persons to whom the
+  // Software is furnished to do so, subject to the following conditions:
+
+  // The above copyright notice and this permission notice shall be included in
+  // all copies or substantial portions of the Software.
+
+  // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+  // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+  // DEALINGS IN THE SOFTWARE.
+  int64_t b0 = b;
+  int64_t aa = 1, ba = 0;
+  while (true) {
+    int64_t q = a / b;
+    if (a == b * q) {
+      if (b != 1) {
+        // Modular inverse does not exist!
+        return -1;
+      }
+      while (ba < 0)
+        ba += b0;
+      return ba;
+    }
+    int64_t tmp_a = a;
+    int64_t tmp_aa = aa;
+    a = b;
+    b = tmp_a - b * q;
+    aa = ba;
+    ba = tmp_aa - ba * q;
+  }
+}
 
 enum method_t { cut, stack, increment };
 
@@ -19,7 +69,6 @@ std::vector<technique_t> read_techniques(const char *filename) {
   std::cout << "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n";
   std::cout << "Read file \"" << filename << "\"" << std::endl;
   std::ifstream in(filename);
-  std::map<std::string, std::string> orbits;
   std::regex regex1(
     "cut (-?\\d+)|deal into new stack|deal with increment (\\d+)");
   std::string line;
@@ -96,7 +145,8 @@ int64_t apply(technique_t technique, int64_t modulus, int64_t i, bool verbose) {
     if (verbose) {
       std::cout << "deal with increment " << param << ": " << i;
     }
-    i = (int64_t)(((__int128_t)i * (__int128_t)param) % (__int128_t)modulus);
+    __int128_t a = i, b = param, N = modulus;
+    i = (int64_t)((a * b) % N);
     break;
   }
   }
@@ -237,14 +287,14 @@ void part_two(const techniques_t &techniques, int64_t modulus, int64_t position,
   int64_t exponent) {
   std::cout << "============================================================\n"
             << "Part two, modulus " << modulus << ", position " << position
-            << ", exponent " << exponent << std::endl;
-
-  // Tests.
+            << ", exponent " << exponent << "\n"
+            << "Tests\n";
   if (true) {
     // Card in position after all techniques, reduced i = i * m + a ? OK!
     part_two_exponent_one(techniques, 119315717514047, 2020, false);
     std::cout << "Test reduce:" << std::endl;
-    const auto [mul, add] = reduce(techniques, modulus);
+    const auto reduced = reduce(techniques, modulus);
+    const auto [mul, add] = reduced;
     techniques_t techniques_reduced{{increment, mul}, {cut, modulus - add}};
     int64_t i = apply(techniques_reduced, modulus, position, false);
     std::cout << position << " * " << mul << " + " << add << " = " << i
@@ -256,12 +306,10 @@ void part_two(const techniques_t &techniques, int64_t modulus, int64_t position,
     techniques2.insert(
       std::end(techniques2), std::begin(techniques), std::end(techniques));
     part_two_exponent_one(techniques2, 119315717514047, 2020, false);
+    std::cout << "^^^ with two concatenated copies of puzzle input"
+              << std::endl;
     std::cout << "Test reduce squared:" << std::endl;
-    int64_t mul2 =
-      (int64_t)(((__int128_t)mul * (__int128_t)mul) % (__int128_t)modulus);
-    int64_t add2 =
-      (int64_t)(((__int128_t)add * (__int128_t)mul + (__int128_t)add) %
-                (__int128_t)modulus);
+    auto [mul2, add2] = compose(reduced, reduced, modulus);
     techniques_t techniques2_reduced{{increment, mul2}, {cut, modulus - add2}};
     i = apply(techniques2_reduced, modulus, position, false);
     std::cout << position << " * " << mul2 << " + " << add2 << " = " << i
@@ -269,7 +317,7 @@ void part_two(const techniques_t &techniques, int64_t modulus, int64_t position,
   }
 
   std::cout << "------------------------------------------------------------\n"
-            << "Repeated squaring" << std::endl;
+            << "Answer (by repeated squaring)" << std::endl;
 
   reduced_t power = reduce(techniques, modulus);
   reduced_t result = {1, 0};
@@ -284,8 +332,8 @@ void part_two(const techniques_t &techniques, int64_t modulus, int64_t position,
   auto [mul, add] = result;
   techniques_t techniques_result = {{increment, mul}, {cut, modulus - add}};
   int64_t i = apply(techniques_result, modulus, position, false);
-  std::cout << position << " * " << mul << " + " << add << " = " << i
-            << std::endl;
+  std::cout << position << " * " << mul << " + " << add << " = " << i << "\n"
+            << "Card in position " << position << " is " << i << std::endl;
 }
 
 void do_it() try {
@@ -299,7 +347,7 @@ void do_it() try {
   {
     auto techniques = read_techniques("22.data");
     // Part one, modulus 10007, value 2019, position ?
-    // part_one(techniques, 10007, 2019, false);
+    part_one(techniques, 10007, 2019, false);
 
     // Part two,
     // modulus 119315717514047, prime, 2 ** 46.76177743085247
