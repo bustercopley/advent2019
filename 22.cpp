@@ -65,7 +65,7 @@ struct technique_t {
 
 using techniques_t = std::vector<technique_t>;
 
-std::vector<technique_t> read_techniques(const char *filename) {
+techniques_t read_techniques(const char *filename) {
   std::cout << "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n";
   std::cout << "Read file \"" << filename << "\"" << std::endl;
   std::ifstream in(filename);
