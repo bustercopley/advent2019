@@ -115,8 +115,8 @@ int64_t apply_inverse(
     if (verbose) {
       std::cout << "deal with increment " << param << ": " << i;
     }
-    i = (int64_t)(((__int128_t)i * (__int128_t)modinv(param, modulus)) %
-                  (__int128_t)modulus);
+    __int128_t a = i, b = modinv(param, modulus), N = modulus;
+    i = (int64_t)((a * b) % N);
     break;
   }
   }
