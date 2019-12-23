@@ -220,7 +220,7 @@ struct node_t {
     inputs.push_back(i);
   }
 
-  void recv(int x, int y) {
+  void recv(int64_t x, int64_t y) {
     inputs.push_back(x);
     inputs.push_back(y);
   }
