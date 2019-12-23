@@ -4,7 +4,7 @@ FILENAMES=1.exe 2.exe 3.exe 4.exe 5.exe 6.exe 7.exe 8.exe 9.exe 10.exe 11.exe 12
 FILENAME=1.exe
 SRCDIR=.
 OBJDIR=.obj
-OBJECTS=intcode.o d2d.o d2d_stuff.o
+OBJECTS=intcode.o intcode2.o d2d.o d2d_stuff.o
 ARGS=
 
 PCH=pch
