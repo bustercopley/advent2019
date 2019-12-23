@@ -92,13 +92,13 @@ int64_t run_until_output(program_t &program, int64_t &pc, int64_t &base,
       return 0;
     }
 
-    case 1: { // PLUS
+    case 1: { // ADD
       auto p = get_params<3>(program, opcode, pc, base, 2);
       program[p[2]] = p[0] + p[1];
       break;
     }
 
-    case 2: { // TIMES
+    case 2: { // MULTIPLY
       auto p = get_params<3>(program, opcode, pc, base, 2);
       program[p[2]] = p[0] * p[1];
       break;
@@ -210,9 +210,10 @@ struct node_t {
     // Annoyingly, the implementation doesn't (yet) support stopping at an
     // input instruction.
 
-    // We can stop *after* an input instruction by saving 'pc' and jumping to a halt instruction,
-    // from within the input generator (the function 'get_input' passed to 'run_until_output').
-    // Insert the halt instruction here, at program location 16384.
+    // We can stop *after* an input instruction by saving 'pc' and jumping to a
+    // halt instruction, from within the input generator (the function
+    // 'get_input' passed to 'run_until_output'). Insert the halt instruction
+    // here, at program location 16384.
     this->program.push_back(99);
 
     // Send the NIC its network address.
@@ -224,6 +225,11 @@ struct node_t {
     inputs.push_back(y);
   }
 
+  // Return { output_flag, destination, x, y }
+  // * If 'output_flag' is true, the NIC asked to send a packet { x, y }
+  //   to 'destination'.
+  // * If 'output_flag' is false, the NIC emitted '-1' (no packet) or tried
+  //   to read input from an empty queue (and received '-1').
   std::tuple<bool, int64_t, int64_t, int64_t> schedule() {
 
     bool yielded = false;
@@ -231,14 +237,24 @@ struct node_t {
 
     auto get_input = [&]() -> int64_t {
       if (std::empty(inputs)) {
-        // Receive -1, but yield after this instruction.
+        // No input available. The input instruction receives value '-1',
+        // then yields (by jumping the the HALT instruction we inserted
+        // at program address 16384). When the HALT instruction is
+        // executed, 'run_until_output' returns, and we restore 'pc' to
+        // its previous value, just after the input instruction.
         resume = pc;
         pc = 16384;
         yielded = true;
+        std::cout << "Node " << network_address << " yield (input queue empty)"
+                  << std::endl;
         return -1;
       } else {
+        // Input available. Consume and discard one value from the
+        // input queue.
         auto result = inputs.front();
         inputs.erase(std::begin(inputs), std::begin(inputs) + 1);
+        std::cout << "Node " << network_address << " input " << result
+                  << std::endl;
         return result;
       }
     };
@@ -292,7 +308,8 @@ void do_it() try {
     std::cout << "Processing " << filename << std::endl;
     auto program = read_program(filename);
     if (std::empty(program)) {
-      std::cout << "Couldn't read program from \"" << filename << "\"" << std::endl;
+      std::cout << "Couldn't read program from \"" << filename << "\""
+                << std::endl;
     }
     part_one(program);
   }
