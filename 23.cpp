@@ -14,6 +14,10 @@ static const int quantum = 100;
 
 struct yield {};
 
+struct nat_t {
+  int64_t x = 0, y = 0;
+};
+
 struct node_t {
   node_t(const program_t &program, int i) : address(i), program(program) {
     this->program.resize(16384);
@@ -26,7 +30,10 @@ struct node_t {
     inputs.push_back(y);
   }
 
-  bool schedule(std::vector<node_t> &nodes) {
+  // mode 0: return false if output was sent to nat, true otherwise
+  // mode 1: return true if no output was sent, false otherwise
+  bool schedule(std::vector<node_t> &nodes, nat_t & nat, bool mode) {
+    bool no_output = true;
     while (true) {
       bool yielded = false;
       int64_t resume = -1;
@@ -45,30 +52,35 @@ struct node_t {
         }
       };
 
-      int64_t destination = run_until_output(program, pc, base, get_input, false);
+      int64_t destination =
+        run_until_output(program, pc, base, get_input, false);
       if (yielded) {
         pc = resume;
-        return true;
+        return !mode || no_output;
       }
 
       if (destination == -1) {
         std::cout << "Node " << address << " pc " << pc << ", output -1"
                   << std::endl;
-        return true;
+        return !mode || no_output;
       }
 
+      no_output = false;
 
       auto x = run_until_output(program, pc, base, inputs, false);
       auto y = run_until_output(program, pc, base, inputs, false);
-      std::cout << "Node " << address << ", output destination "
-                << destination << ", x " << x << ", y " << y << std::endl;
 
       if (destination == 255) {
-        return false;
+        nat.x = x;
+        nat.y = y;
+        if (!mode) {
+          return false;
+        }
       }
-
-      nodes[destination].inputs.push_back(x);
-      nodes[destination].inputs.push_back(y);
+      else {
+        nodes[destination].inputs.push_back(x);
+        nodes[destination].inputs.push_back(y);
+      }
     }
   }
 
@@ -85,8 +97,36 @@ void part_one(const program_t &program) {
   }
 
   int n = 0;
-  while (nodes[n].schedule(nodes)) {
+  nat_t nat = { 0, 0 };
+  while (nodes[n].schedule(nodes, nat, false)) {
     n = (n + 1) % 50;
+  }
+
+  std::cout << "Part one answer " << nat.y << std::endl;
+}
+
+void part_two(const program_t &program) {
+  std::vector<node_t> nodes;
+  for (int n = 0; n != 50; ++n) {
+    nodes.emplace_back(program, n);
+  }
+
+  int prev_nat_y = -1;
+  nat_t nat;
+  while (true) {
+    bool no_output = true;
+    for (int n = 0; n != 50; ++n) {
+      no_output = nodes[n].schedule(nodes, nat, true) && no_output;
+    }
+    if (no_output) {
+      if (nat.y == prev_nat_y) {
+        std::cout << "Part two anser " << nat.y << std::endl;
+        return;
+      }
+      prev_nat_y = nat.y;
+      nodes[0].inputs.push_back(nat.x);
+      nodes[0].inputs.push_back(nat.y);
+    }
   }
 }
 
@@ -95,7 +135,7 @@ void do_it() try {
     std::cout << "Processing " << filename << std::endl;
     auto programs = read_programs(filename);
     part_one(programs[0]);
-    // part_two(programs[0]);
+    part_two(programs[0]);
   }
 } catch (const char *e) {
   std::cout << e << std::endl;
