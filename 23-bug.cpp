@@ -245,7 +245,7 @@ struct node_t {
         resume = pc;
         pc = 16384;
         yielded = true;
-        std::cout << "Node " << network_address << " yield (input queue empty)"
+        std::cout << "Node " << network_address << " input -1 (and yield)"
                   << std::endl;
         return -1;
       } else {
@@ -266,14 +266,14 @@ struct node_t {
     }
 
     if (destination == -1) {
-      std::cout << "Node " << network_address << ", output -1" << std::endl;
+      std::cout << "Node " << network_address << " output -1" << std::endl;
       return {false, 0, 0, 0};
     }
 
     auto x = run_until_output(program, pc, base, get_input);
     auto y = run_until_output(program, pc, base, get_input);
-    std::cout << "Node " << network_address << ", output destination "
-              << destination << ", x " << x << ", y " << y << std::endl;
+    std::cout << "Node " << network_address << " send {" << x << ", " << y
+              << "} to " << destination << std::endl;
     return {true, destination, x, y};
   }
 };
@@ -288,8 +288,6 @@ void part_one(const program_t &program) {
   while (true) {
     auto [flag, addr, x, y] = nodes[n].schedule();
     if (flag) {
-      std::cout << "Node " << n << " send to " << addr << ", values " << x
-                << ", " << y << std::endl;
       if (addr == 255) {
         // Day one answer.
         std::cout << "Broadcast " << x << ", " << y << std::endl;
